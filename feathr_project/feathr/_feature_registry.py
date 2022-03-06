@@ -4,7 +4,7 @@ import glob
 from pyexpat import features
 from typing import List
 from feathr.sdk.transformation import Transformation
-from feathr.file_utils import write_to_file
+from feathr._file_utils import write_to_file
 from feathr.sdk.feature_anchor import FeatureAnchor
 from feathr.sdk.source import Source
 from feathr.sdk.feature import Feature

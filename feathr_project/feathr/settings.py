@@ -1,7 +1,9 @@
 from typing import Optional
 from jinja2 import Template
 
-class Settings:
+
+class ObservationSettings:
+    """Time settings of the observation data. Used in feature join."""
     def __init__(self, event_timestamp_column: Optional[str] = None, timestamp_format: str = "epoch") -> None:
         self.event_timestamp_column = event_timestamp_column
         self.timestamp_format = timestamp_format

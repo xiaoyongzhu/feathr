@@ -7,10 +7,20 @@ from feathr.sdk.dtype import Dimension, TensorFeatureType, ValueType
 from feathr.sdk.source import PASSTHROUGH_SOURCE
 from feathr.sdk.transformation import WindowAggTransform
 
-def test_non_agg_feature_anchor_to_config():
+def test_simple_feature_derivation_to_config():
 
     features = [
-                Feature(name = "trip_distance", feature_type = FLOAT),
+                Feature(name = "f_trip_time_distance",
+                        feature_type = FLOAT,
+                        from_features = "f_trip_distance * f_trip_time_duration"),
+
+                Feature(name = "f_trip_time_distance",
+                        feature_type = FLOAT,
+                        from_features = "f_trip_distance * f_trip_time_duration")
+    ]
+
+    features = [
+        Feature(name = "trip_distance", feature_type = FLOAT),
                 Feature(name = "f_is_long_trip_distance",
                         feature_type = BOOLEAN,
                         transform = ExprTransform("trip_distance>30")),
@@ -53,7 +63,7 @@ def test_non_agg_feature_anchor_to_config():
     """
     assert ''.join(feature_anchor.to_feature_config().split()) == ''.join(expected_non_agg_feature_config.split())
 
-def test_agg_feature_anchor_to_config():
+def test_complex_feature_derivation_to_config():
     batch_source = HdfsSource(name = "nycTaxiBatchSource",
                     path = "abfss://feathrazuretest3fs@feathrazuretest3storage.dfs.core.windows.net/demo_data",
                     event_timestamp_column = "lpep_dropoff_datetime",

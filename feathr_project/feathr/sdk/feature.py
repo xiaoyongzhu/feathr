@@ -1,5 +1,3 @@
-
-
 from typing import Dict, Optional
 from feathr.sdk.dtype import ValueType, FeatureType
 from feathr.sdk.transformation import RowTransformation

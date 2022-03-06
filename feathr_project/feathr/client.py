@@ -10,10 +10,10 @@ from feathr._envvariableutil import _EnvVaraibleUtil
 from feathr._feature_registry import _FeatureRegistry
 from feathr._synapse_submission import _FeathrSynapseJobLauncher
 from feathr._databricks_submission import _FeathrDatabricksJobLauncher
-from feathr.file_utils import write_to_file
+from feathr._file_utils import write_to_file
 from jinja2 import Template
-from feathr.sdk.join.query_feature_list import QueryFeatureList
-from feathr.sdk.join.settings import Settings
+from feathr.query_feature_list import QueryFeatureList
+from feathr.settings import ObservationSettings
 
 class FeatureJoinJobParams:
     """Parameters related to feature join job.
@@ -150,7 +150,7 @@ class FeathrClient(object):
         """
         return self.registry.get_registry_client()
 
-    def online_get_features(self, feature_table, key, feature_names):
+    def get_online_features(self, feature_table, key, feature_names):
         """Fetches feature value for a certain key from a online feature table.
 
         Args:
@@ -171,7 +171,7 @@ class FeathrClient(object):
         res = self.redis_clint.hmget(redis_key, *feature_names)
         return res
 
-    def online_batch_get_features(self, feature_table, keys, feature_names):
+    def multi_get_online_features(self, feature_table, keys, feature_names):
         """Fetches feature value for a list of keys from a online feature table. This is the batch version of the get API.
 
         Args:
@@ -237,23 +237,21 @@ class FeathrClient(object):
         self.logger.info('Redis connection is successful and completed.')
         self.redis_clint = redis_clint
 
-    def get_offline_features_with_key(self,
-                        features: List[str],
+    def get_offline_features(self,
+                        features: QueryFeatureList,
                         observationPath: str,
-                        outputPath: str,
-                        key_columns: Optional[List[str]] = None):
-        feature_lists = [QueryFeatureList(key = key_columns, feature_list = features)]
-        return self.join_offline_features_with_setting(feature_lists, observationPath, outputPath)
+                        outputPath: str):
+        return self.get_offline_features([features], observationPath, outputPath)
 
-    def join_offline_features_with_setting(self,
+    def get_offline_features(self,
                         feature_lists: List[QueryFeatureList],
                         observationPath: str,
                         outputPath: str,
-                        join_settings: Optional[Settings] = None):
+                        observation_settings: Optional[ObservationSettings] = None):
         # produce join config
         tm = Template("""
-            {% if join_settings is not none %}
-                {{join_settings.to_config()}}
+            {% if observation_settings is not none %}
+                {{observation_settings.to_config()}}
             {% endif %}
             featureList: [
                 {% for list in feature_lists %}
@@ -263,15 +261,15 @@ class FeathrClient(object):
             observationPath: "{{observationPath}}"
             outputPath: "{{outputPath}}"
         """)
-        config = tm.render(feature_lists = feature_lists, join_settings = join_settings,
+        config = tm.render(feature_lists = feature_lists, observation_settings = observation_settings,
                            observationPath = observationPath, outputPath = outputPath)
         config_file_name = "feature_join_conf/feature_join.conf"
         config_file_path = os.path.abspath(config_file_name)
         write_to_file(content=config, file_name=config_file_path)
-        return self.join_offline_features(config_file_name)
+        return self.get_offline_features(config_file_name)
 
 
-    def join_offline_features(self, feature_join_conf_path: str ='feature_join_conf/feature_join.conf'):
+    def get_offline_features(self, feature_join_conf_path: str ='feature_join_conf/feature_join.conf'):
         """Joins the features to your offline observation dataset based on the join config.
 
         Args:

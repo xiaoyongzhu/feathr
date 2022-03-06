@@ -1,10 +1,10 @@
 from feathr.sdk.feature_anchor import FeatureAnchor
-from feathr.sdk.source import HDFSSource
+from feathr.sdk.source import HdfsSource
 from feathr.sdk.feature import Feature
 from feathr.sdk.dtype import BOOLEAN, FLOAT
 from feathr.sdk.transformation import WindowAggTransform
 
-batch_source = HDFSSource(name = "nycTaxiBatchSource",
+batch_source = HdfsSource(name = "nycTaxiBatchSource",
                           path = "abfss://feathrazuretest3fs@feathrazuretest3storage.dfs.core.windows.net/demo_data",
                           event_timestamp_column = "lpep_dropoff_datetime",
                           timestamp_format = "yyyy-MM-dd HH:mm:ss")
