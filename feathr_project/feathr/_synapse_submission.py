@@ -50,8 +50,8 @@ class _FeathrSynapseJobLauncher(SparkJobLauncher):
 
         return self._datalake.download_file(result_path, local_folder)
 
-    def submit_feathr_job(self, job_name: str, main_jar_path: str,  main_class_name: str, arguments: List[str],
-                          reference_files_path: List[str], job_tags: Dict[str, str] = None,
+    def submit_feathr_job(self, job_name: str, main_jar_path: str = None,  main_class_name: str = None, arguments: List[str] = None,
+                          python_files: List[str]= None, reference_files_path: List[str] = None, job_tags: Dict[str, str] = None,
                           configuration: Dict[str, str] = None):
         """
         Submits the feathr job
@@ -75,7 +75,7 @@ class _FeathrSynapseJobLauncher(SparkJobLauncher):
             configuration (Dict[str, str]): Additional configs for the spark job
         """
 
-        if main_jar_path.startswith('abfs'):
+        if main_jar_path is None or main_jar_path.startswith('abfs'):
             main_jar_cloud_path = main_jar_path
             logger.info(
                 'Cloud path {} is used for running the job: {}', main_jar_path, job_name)
@@ -94,6 +94,7 @@ class _FeathrSynapseJobLauncher(SparkJobLauncher):
         self.current_job_info = self._api.create_spark_batch_job(job_name=job_name,
                                                                  main_file=main_jar_cloud_path,
                                                                  class_name=main_class_name,
+                                                                 python_files=python_files,
                                                                  arguments=arguments,
                                                                  reference_files=reference_files_path,
                                                                  tags=job_tags,
@@ -203,7 +204,7 @@ class _SynapseJobRunner(object):
         return self.client.spark_batch.cancel_spark_batch_job(job_id)
 
     def create_spark_batch_job(self, job_name, main_file, class_name=None,
-                               arguments=None,  reference_files=None, archives=None, configuration=None, tags=None):
+                               arguments=None, python_files=None, reference_files=None, archives=None, configuration=None, tags=None):
         """
         Submit a spark job to a certain cluster
         """
@@ -222,15 +223,16 @@ class _SynapseJobRunner(object):
         #         updated_arguments.append(elem.replace("}", " }"))
         #     else:
         #         updated_arguments.append(elem)
-
+        print(python_files)
         spark_batch_job_options = SparkBatchJobOptions(
             tags=tags,
             name=job_name,
-            file=main_file,
+            file=python_files[0],
             class_name=class_name,
+            python_files = python_files,
             arguments=arguments,
             jars=jars,
-            files=files,
+            files=python_files,
             archives=archives,
             configuration=configuration,
             driver_memory=driver_memory,
