@@ -104,9 +104,9 @@ client.multi_get_online_features(feature_table = "agg_features",
                                  feature_names = ['f_location_avg_fare', 'f_location_max_fare'])
 ```
 
-# More on Defining Features
+## More on Defining Features
 
-## Defining Window Aggregation Features
+### Defining Window Aggregation Features
 
 ```python
 agg_features = [Feature(name="f_location_avg_fare",
@@ -123,7 +123,7 @@ agg_anchor = FeatureAnchor(name="aggregationFeatures",
                            features=agg_features)
 ```
 
-## Defining Named Data Sources
+### Defining Named Data Sources
 
 ```python
 batch_source = HdfsSource(
@@ -133,7 +133,7 @@ batch_source = HdfsSource(
     timestamp_format="yyyy-MM-dd HH:mm:ss")                 # Supports various fromats inculding epoch
 ```
 
-## Beyond Features on Raw Data Sources - Derived Features
+### Beyond Features on Raw Data Sources - Derived Features
 
 ```python
 # Compute a new feature(a.k.a. derived feature) on top of an existing feature
