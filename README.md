@@ -117,7 +117,6 @@ agg_features = [Feature(name="f_location_avg_fare",
                             agg_func="AVG",                       # Apply average aggregation over the window
                             window="90d")),                       # Over a 90-day window
                 ]
-
 agg_anchor = FeatureAnchor(name="aggregationFeatures",
                            source=batch_source,
                            features=agg_features)
