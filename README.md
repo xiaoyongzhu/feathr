@@ -73,6 +73,29 @@ def add_new_dropoff_and_fare_amount_column(df: DataFrame):
     df = df.withColumn("fare_amount_cents", df.fare_amount.cast('double') * 100)
     return df
 
+
+from pyspark.sql import SparkSession, DataFrame
+def feathr_udf_filter_location_id(df: DataFrame) -> DataFrame:
+  # if using Spark SQL, need to declare this default spark session, and create a temp view so that you can run Spark SQL on it.
+  global spark
+  df.createOrReplaceTempView("feathr_temp_table_feathr_udf_day_calc")
+  sqlDF = spark.sql(
+  """
+  SELECT *
+  FROM feathr_temp_table_feathr_udf_day_calc
+  WHERE DOLocationID!= 100
+  """
+  )
+  return sqlDF
+
+def feathr_udf_pandas_spark(df: DataFrame) -> DataFrame:
+  # using pandas on spark APIs. Fore more details, refer to the doc here: https://spark.apache.org/docs/latest/api/python/user_guide/pandas_on_spark/index.html
+  # Note that this API is only available for Spark 3.2 and later, so make sure you submit to a spark cluster that has Spark 3.2 and later.
+  psdf = df.to_pandas_on_spark()
+  psdf['fare_amount_cents'] = psdf['fare_amount']*100
+  # need to make sure converting the pandas-on-spark dataframe to Spark Dataframe.
+  return psdf.to_spark()
+
 batch_source = HdfsSource(name="nycTaxiBatchSource",
                         path="abfss://feathrazuretest3fs@feathrazuretest3storage.dfs.core.windows.net/demo_data/green_tripdata_2020-04.csv",
                         preprocessing=add_new_dropoff_and_fare_amount_column,
