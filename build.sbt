@@ -32,6 +32,7 @@ val localAndCloudCommonDependencies = Seq(
     "org.scalatest" %% "scalatest" % "3.0.0" % Test,
     "it.unimi.dsi" % "fastutil" % "8.1.1",
     "org.mvel" % "mvel2" % "2.2.7.Final",
+  "io.openlineage" % "openlineage-spark" % "0.7.1",
     "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.6.7.1",
     "com.fasterxml.jackson.dataformat" % "jackson-dataformat-yaml" % "2.6.5",
     "com.fasterxml.jackson.dataformat" % "jackson-dataformat-csv" % "2.4.4",
