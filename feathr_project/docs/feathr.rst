@@ -60,6 +60,14 @@ feathr.feathr\_configurations module
    :undoc-members:
    :show-inheritance:
 
+feathr.feathr\_pyspark\_driver\_template module
+-----------------------------------------------
+
+.. automodule:: feathr.feathr_pyspark_driver_template
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 feathr.feature module
 ---------------------
 
