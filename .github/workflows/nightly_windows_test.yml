@@ -1,8 +1,8 @@
-name: Feathr Scala Tests And Azure E2E Integration
+name: Nightly Feathr Tests on Windows
 
 on:
   schedule:
-    - cron: 58 6 * * *
+    - cron: 05 14 * * *
     
 jobs:
   sbt_test:
