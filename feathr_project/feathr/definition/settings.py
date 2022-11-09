@@ -21,7 +21,7 @@ class ObservationSettings(HoconConvertible):
         self.event_timestamp_column = event_timestamp_column
         self.timestamp_format = timestamp_format
         self.observation_path = observation_path
-        if self.observation_path.startswith("sql%"):
+        if "sql%" in self.observation_path:
             self.observation_path = ' '.join(self.observation_path.splitlines())
         if observation_path.startswith("http"):
             logger.warning("Your observation_path {} starts with http, which is not supported. Consider using paths starting with wasb[s]/abfs[s]/s3.", observation_path)
