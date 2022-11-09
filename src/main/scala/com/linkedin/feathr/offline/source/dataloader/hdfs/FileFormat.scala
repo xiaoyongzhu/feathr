@@ -25,6 +25,8 @@ object FileFormat {
   val JDBC = "JDBC"
   // Snowflake type
   val SNOWFLAKE = "SNOWFLAKE"
+  // SparkSQL type
+  val SPARKSQL = "SPARKSQL"
 
   private val AVRO_DATASOURCE = "avro"
   // Use Spark native orc reader instead of hive-orc since Spark 2.3
@@ -47,6 +49,7 @@ object FileFormat {
       case p if p.endsWith(".avro") => AVRO
       case p if p.startsWith("jdbc:") => JDBC
       case p if p.startsWith("snowflake:") => SNOWFLAKE
+      case p if p.startsWith("sql%") => SPARKSQL
       case _ =>
         // if we cannot tell the file format from the file extensions, we should read from `spark.feathr.inputFormat` to get the format that's sepcified by user.
         if (ss.conf.get("spark.feathr.inputFormat","").nonEmpty) ss.conf.get("spark.feathr.inputFormat") else PATHLIST
@@ -85,6 +88,7 @@ object FileFormat {
       case p if p.endsWith(".avro") => AVRO
       case p if p.startsWith("jdbc:") => JDBC
       case p if p.startsWith("snowflake:") => SNOWFLAKE
+      case p if p.startsWith("sql%") => SPARKSQL
       case _ =>
         // if we cannot tell the file format from the file extensions, we should read from `spark.feathr.inputFormat` to get the format that's sepcified by user.
         dataIOParameters.getOrElse(DATA_FORMAT, ss.conf.get("spark.feathr.inputFormat", AVRO)).toUpperCase
@@ -112,6 +116,9 @@ object FileFormat {
         JdbcUtils.loadDataFrame(ss, existingHdfsPaths.head)
       case SNOWFLAKE =>
         SnowflakeUtils.loadDataFrame(ss, existingHdfsPaths.head)
+      case SPARKSQL =>
+        val sqlQuery = existingHdfsPaths.head.split("sql%")(1)
+        ss.sql(sqlQuery)
       case _ =>
         // Allow dynamic config of the file format if users want to use one
         if (ss.conf.getOption("spark.feathr.inputFormat").nonEmpty) ss.read.format(ss.conf.get("spark.feathr.inputFormat")).load(existingHdfsPaths: _*)
