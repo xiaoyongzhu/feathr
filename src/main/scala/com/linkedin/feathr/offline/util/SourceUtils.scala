@@ -654,6 +654,9 @@ private[offline] object SourceUtils {
       case FileFormat.CSV => {
         ss.read.format("csv").option("header", "true").option("delimiter", csvDelimiterOption).load(inputData.inputPath)
       }
+      case FileFormat.SPARKSQL => {
+        FileFormat.loadHdfsDataFrame("SPARKSQL", List(inputData.inputPath))
+      }
       case _ => {
         loadAsDataFrame(ss, SimplePath(inputData.inputPath),dataLoaderHandlers)
       }
