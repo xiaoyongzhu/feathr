@@ -446,6 +446,7 @@ class FeathrClient(object):
         """)
         config = tm.render(feature_lists=feature_queries, observation_settings=observation_settings, output_path=output_path)
         config_file_path = os.path.join(self.local_workspace_dir, config_file_name)
+
         # make sure `FeathrClient.build_features()` is called before getting offline features/materialize features
         # otherwise users will be confused on what are the available features
         # in build_features it will assign anchor_list and derived_feature_list variable, hence we are checking if those two variables exist to make sure the above condition is met
