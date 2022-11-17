@@ -29,3 +29,7 @@ class _FeatureRegistryAWS(_FeatureRegistry):
         logging.debug("PATH: ", path)
         logging.debug("BODY: ", json.dumps(body, indent=2))
         return check(requests.post(f"{self.endpoint}{path}", auth=self.credential, json=body)).json()
+    
+    def _delete(self, path: str) -> dict:
+        logging.debug("PATH: ", path)
+        return check(requests.delete(f"{self.endpoint}{path}", auth=self.credential)).json()
