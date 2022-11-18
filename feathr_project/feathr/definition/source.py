@@ -151,22 +151,20 @@ class SnowflakeSource(Source):
             raise RuntimeError("One of dbtable or query must be specified..")
         if dbtable is not None:
             self.dbtable = dbtable
-            self.query = None
         if query is not None:
             self.query = query
-            self.dbtable = None
         self.database = database
         self.schema = schema
-        self.path = self._get_snowflake_path()
+        self.path = self._get_snowflake_path(dbtable, query)
 
-    def _get_snowflake_path(self) -> str:
+    def _get_snowflake_path(self, dbtable: Optional[str] = None, query: Optional[str] = None) -> str:
         """
         Returns snowflake path for registry.
         """
-        if self.dbtable:
-            return f"snowflake://snowflake_account/?sfDatabase={self.database}&sfSchema={self.schema}&dbtable={self.dbtable}"
+        if dbtable:
+            return f"snowflake://snowflake_account/?sfDatabase={self.database}&sfSchema={self.schema}&dbtable={dbtable}"
         else:
-            return f"snowflake://snowflake_account/?sfDatabase={self.database}&sfSchema={self.schema}&query={self.query}"
+            return f"snowflake://snowflake_account/?sfDatabase={self.database}&sfSchema={self.schema}&query={query}"
     
     def parse_snowflake_path(url: str) -> Dict[str, str]:
         """
