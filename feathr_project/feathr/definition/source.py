@@ -151,8 +151,10 @@ class SnowflakeSource(Source):
             raise RuntimeError("One of dbtable or query must be specified..")
         if dbtable is not None:
             self.dbtable = dbtable
+            self.query = None
         if query is not None:
             self.query = query
+            self.dbtable = None
         self.database = database
         self.schema = schema
         self.path = self._get_snowflake_path()
