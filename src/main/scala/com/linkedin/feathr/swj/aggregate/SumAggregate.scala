@@ -28,7 +28,8 @@ class SumAggregate(val metricCol: String) extends AggregationSpec {
         case DoubleType => aggregate.asInstanceOf[Double] + record.asInstanceOf[Double]
         case FloatType => aggregate.asInstanceOf[Float] + record.asInstanceOf[Float]
         case _ => throw new RuntimeException(s"Invalid data type for SUM metric col $metricCol. " +
-          s"Only Int, Long, Double, and Float are supported, but got ${dataType.typeName}")
+          s"Only Int, Long, Double, and Float are supported, but got ${dataType.typeName}" +
+        s"Data Type is ${dataType.prettyJson}")
       }
     }
   }
