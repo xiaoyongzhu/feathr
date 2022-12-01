@@ -877,6 +877,7 @@ class FeathrClient(object):
         Get feature from registry by project name. The features got from registry are automatically built.
         """
         registry_anchor_list, registry_derived_feature_list = self.registry.get_features_from_registry(project_name)
+        print(f"REGISTRY DERIVED FEATURE LIST: {registry_derived_feature_list}")
         self.build_features(registry_anchor_list, registry_derived_feature_list)
         feature_dict = {}
         # add those features into a dict for easier lookup
