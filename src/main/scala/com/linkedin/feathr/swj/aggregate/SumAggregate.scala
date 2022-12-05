@@ -27,8 +27,9 @@ class SumAggregate(val metricCol: String) extends AggregationSpec {
         case LongType => aggregate.asInstanceOf[Long] + record.asInstanceOf[Long]
         case DoubleType => aggregate.asInstanceOf[Double] + record.asInstanceOf[Double]
         case FloatType => aggregate.asInstanceOf[Float] + record.asInstanceOf[Float]
+        case DecimalType() => BigDecimal(aggregate.toString) + BigDecimal(record.toString)
         case _ => throw new RuntimeException(s"Invalid data type for SUM metric col $metricCol. " +
-          s"Only Int, Long, Double, and Float are supported, but got ${dataType.typeName}")
+          s"Only Int, Long, Double, Float and Decimal() are supported, but got ${dataType.typeName}")
       }
     }
   }
@@ -45,8 +46,9 @@ class SumAggregate(val metricCol: String) extends AggregationSpec {
         case LongType => aggregate.asInstanceOf[Long] - record.asInstanceOf[Long]
         case DoubleType => aggregate.asInstanceOf[Double] - record.asInstanceOf[Double]
         case FloatType => aggregate.asInstanceOf[Float] - record.asInstanceOf[Float]
+        case DecimalType() => BigDecimal(aggregate.toString) - BigDecimal(record.toString)
         case _ => throw new RuntimeException(s"Invalid data type for SUM metric col $metricCol. " +
-          s"Only Int, Long, Double, and Float are supported, but got ${dataType.typeName}")
+          s"Only Int, Long, Double, Float and Decimal() are supported, but got ${dataType.typeName}")
       }
     }
   }
