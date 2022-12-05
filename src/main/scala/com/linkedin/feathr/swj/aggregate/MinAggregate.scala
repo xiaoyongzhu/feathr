@@ -1,7 +1,7 @@
 package com.linkedin.feathr.swj.aggregate
 
 import AggregationType._
-import org.apache.spark.sql.types.{DataType, DoubleType, FloatType, IntegerType, LongType}
+import org.apache.spark.sql.types.{DataType, DecimalType, DoubleType, FloatType, IntegerType, LongType}
 
 /**
   * MIM aggregation implementation.
@@ -27,8 +27,9 @@ class MinAggregate(val metricCol: String) extends AggregationSpec {
         case LongType => math.min(aggregate.asInstanceOf[Long], record.asInstanceOf[Long])
         case DoubleType => math.min(aggregate.asInstanceOf[Double], record.asInstanceOf[Double])
         case FloatType => math.min(aggregate.asInstanceOf[Float], record.asInstanceOf[Float])
+        case DecimalType() => BigDecimal(math.min(aggregate.toString.toFloat, record.toString.toFloat).toString)
         case _ => throw new RuntimeException(s"Invalid data type for MIN metric col $metricCol. " +
-          s"Only Int, Long, Double, and Float are supported, but got ${dataType.typeName}")
+          s"Only Int, Long, Double, Float and Decimal() are supported, but got ${dataType.typeName}")
       }
     }
   }

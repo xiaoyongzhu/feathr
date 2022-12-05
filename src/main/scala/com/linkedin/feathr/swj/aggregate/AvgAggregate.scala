@@ -5,6 +5,8 @@ import AggregationType._
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
+import scala.math.BigDecimal.javaBigDecimal2bigDecimal
+
 /**
   * AVG aggregation implementation.
   *
@@ -52,8 +54,10 @@ class AvgAggregate(valueCol: String, countCol: String = "1") extends Aggregation
               aggregateRow.getDouble(0) / count
             case FloatType =>
               aggregateRow.getFloat(0) / count
+            case DecimalType() =>
+              aggregateRow.get(0).toString.toFloat / count
             case _ => throw new RuntimeException(s"Invalid data type for value column for AVG " +
-              s"aggregate. Only Int, Long, Double and Float are supported, but got " +
+              s"aggregate. Only Int, Long, Double, Float and Decimal() are supported, but got " +
               s"${valueType.typeName}")
           }
         case _ => throw new RuntimeException(s"Invalid data type for AVG aggregate result. " +
@@ -167,8 +171,16 @@ class AvgAggregate(valueCol: String, countCol: String = "1") extends Aggregation
         } else {
           aggValue - recordValue
         }
+      case DecimalType() =>
+        val aggValue = aggregateRow.get(0).toString.toFloat
+        val recordValue = recordRow.get(0).toString.toFloat
+        if (isAgg) {
+          aggValue + recordValue
+        } else {
+          aggValue - recordValue
+        }
       case _ => throw new RuntimeException(s"Invalid data type for value column $valueCol " +
-        s"for AVG aggregate. Only Int, Long, Double and Float are supported, but got " +
+        s"for AVG aggregate. Only Int, Long, Double, Float and Decimal() are supported, but got " +
         s"${valueType.typeName}")
     }
     Row(value, count)
