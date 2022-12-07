@@ -51,7 +51,10 @@ def submit_spark_job(feature_names_funcs):
     updated_args = []
     for ele in sys.argv:
         # remove additional '
-        updated_args.append(ele.replace('\'', ''))
+        updated_str = ele.replace('\'', '')
+        # turn /dbfs/tmp/feathr_getting_started3/withinnotebooktest/feature_conf/ to dbfs:/tmp/feathr_getting_started3/withinnotebooktest/feature_conf/ 
+        updated_str = ele.replace('/dbfs', 'dbfs:')
+        updated_args.append(updated_str)
 
     print("updated args is", updated_args)
     spark = SparkSession.builder.getOrCreate()
