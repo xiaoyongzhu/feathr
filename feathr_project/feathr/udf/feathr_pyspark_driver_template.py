@@ -40,6 +40,13 @@ def submit_spark_job(feature_names_funcs):
     if '--join-config' in sys.argv:
         has_join_config = True
 
+    updated_args = []
+    for ele in sys.argv:
+        # remove additional '
+        updated_args.append(ele.replace('\'', ''))
+
+    print("updated args is", updated_args)
+
     py4j_feature_job = None
     if has_gen_config and has_join_config:
         raise RuntimeError("Both FeatureGenConfig and FeatureJoinConfig are provided. "
@@ -53,7 +60,7 @@ def submit_spark_job(feature_names_funcs):
     else:
         raise RuntimeError("None of FeatureGenConfig and FeatureJoinConfig are provided. "
                            "One of them should be provided.")
-    job_param_java_array = to_java_string_array(sys.argv)
+    job_param_java_array = to_java_string_array(updated_args)
 
     print("submit_spark_job: feature_names_funcs: ")
     print(feature_names_funcs)
