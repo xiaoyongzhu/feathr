@@ -69,6 +69,17 @@ def submit_spark_job(feature_names_funcs):
     else:
         raise RuntimeError("None of FeatureGenConfig and FeatureJoinConfig are provided. "
                            "One of them should be provided.")
+    def to_java_string_array(arr):
+        """Convert a Python string list to a Java String array.
+        """
+        
+        from pyspark.sql import SparkSession, DataFrame, SQLContext
+        import sys    
+        spark = SparkSession.builder.getOrCreate()
+        jarr = spark._sc._gateway.new_array(spark._sc._jvm.java.lang.String, len(arr))
+        for i in range(len(arr)):
+            jarr[i] = arr[i]
+        return jarr
     job_param_java_array = to_java_string_array(updated_args)
 
     print("submit_spark_job: feature_names_funcs: ")
