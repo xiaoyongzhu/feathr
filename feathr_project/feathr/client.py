@@ -119,6 +119,10 @@ class FeathrClient(object):
             'spark_config', 'spark_cluster')
 
         self.credential = credential
+
+        if not is_spark_notebook():
+            self._FEATHR_JOB_JAR_PATH = \
+                self.envutils.get_environment_variable_with_default(
                     'spark_config', 'local', 'feathr_runtime_location')
             self.feathr_spark_launcher = _FeathrLocalSparkJobWithinNotebookLauncher()
         elif self.spark_runtime not in {'azure_synapse', 'databricks', 'local'}:
