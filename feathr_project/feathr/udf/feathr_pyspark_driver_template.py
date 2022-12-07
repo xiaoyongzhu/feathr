@@ -12,6 +12,9 @@ spark = SparkSession.builder.getOrCreate()
 def to_java_string_array(arr):
     """Convert a Python string list to a Java String array.
     """
+    
+    from pyspark.sql import SparkSession, DataFrame, SQLContext
+    import sys    
     spark = SparkSession.builder.getOrCreate()
     jarr = spark._sc._gateway.new_array(spark._sc._jvm.java.lang.String, len(arr))
     for i in range(len(arr)):
@@ -34,6 +37,8 @@ def submit_spark_job(feature_names_funcs):
     # In pyspark job, the first param is the python file.
     # For example: ['pyspark_client.py', '--join-config', 'abfss://...', ...]
     import sys
+    from pyspark.sql import SparkSession, DataFrame, SQLContext
+    import sys    
     print("sys.argv is")
     print(sys.argv)
     has_gen_config = False
