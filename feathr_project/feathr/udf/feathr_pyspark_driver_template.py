@@ -6,12 +6,13 @@ from pyspark.sql.functions import *
 # This is executed in Spark driver
 # The logger doesn't work in Pyspark so we just use print
 print("Feathr Pyspark job started.")
-spark = SparkSession.builder.appName('FeathrPyspark').getOrCreate()
+spark = SparkSession.builder.getOrCreate()
 
 
 def to_java_string_array(arr):
     """Convert a Python string list to a Java String array.
     """
+    spark = SparkSession.builder.getOrCreate()
     jarr = spark._sc._gateway.new_array(spark._sc._jvm.java.lang.String, len(arr))
     for i in range(len(arr)):
         jarr[i] = arr[i]
@@ -48,8 +49,9 @@ def submit_spark_job(feature_names_funcs):
         updated_args.append(ele.replace('\'', ''))
 
     print("updated args is", updated_args)
-
+    spark = SparkSession.builder.getOrCreate()
     py4j_feature_job = None
+    print("has_gen_config, has_join_config", has_gen_config, has_join_config)
     if has_gen_config and has_join_config:
         raise RuntimeError("Both FeatureGenConfig and FeatureJoinConfig are provided. "
                            "Only one of them should be provided.")
