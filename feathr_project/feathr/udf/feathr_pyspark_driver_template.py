@@ -32,6 +32,7 @@ def submit_spark_job(feature_names_funcs):
     # sys.argv has all the arguments passed by submit job.
     # In pyspark job, the first param is the python file.
     # For example: ['pyspark_client.py', '--join-config', 'abfss://...', ...]
+    print("sys.argv is", sys.argv)
     has_gen_config = False
     has_join_config = False
     if '--generation-config' in sys.argv:

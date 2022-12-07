@@ -25,6 +25,7 @@ from feathr.definition.sink import Sink, HdfsSink
 from feathr.protobuf.featureValue_pb2 import FeatureValue
 from feathr.spark_provider._databricks_submission import _FeathrDatabricksJobLauncher
 from feathr.spark_provider._localspark_submission import _FeathrLocalSparkJobLauncher
+from feathr.spark_provider._local_spark_within_notebook import _FeathrLocalSparkJobWithinNotebookLauncher
 from feathr.spark_provider._synapse_submission import _FeathrSynapseJobLauncher
 from feathr.spark_provider.feathr_configurations import SparkExecutionConfiguration
 from feathr.udf._preprocessing_pyudf_manager import _PreprocessingPyudfManager
@@ -41,6 +42,7 @@ from pyhocon import ConfigFactory
 from feathr.registry._feathr_registry_client import _FeatureRegistry
 from feathr.registry._feature_registry_purview import _PurviewRegistry
 from feathr.version import get_version
+from feathr.utils.platform import is_spark_notebook
 class FeathrClient(object):
     """Feathr client.
 
@@ -117,7 +119,9 @@ class FeathrClient(object):
             'spark_config', 'spark_cluster')
 
         self.credential = credential
-        if self.spark_runtime not in {'azure_synapse', 'databricks', 'local'}:
+                    'spark_config', 'local', 'feathr_runtime_location')
+            self.feathr_spark_launcher = _FeathrLocalSparkJobWithinNotebookLauncher()
+        elif self.spark_runtime not in {'azure_synapse', 'databricks', 'local'}:
             raise RuntimeError(
                 f'{self.spark_runtime} is not supported. Only \'azure_synapse\', \'databricks\' and \'local\' are currently supported.')
         elif self.spark_runtime == 'azure_synapse':
@@ -170,6 +174,7 @@ class FeathrClient(object):
                 workspace_path = self.envutils.get_environment_variable_with_default('spark_config', 'local', 'workspace'),
                 master = self.envutils.get_environment_variable_with_default('spark_config', 'local', 'master')
                 )
+
 
         self._construct_redis_client()
 
