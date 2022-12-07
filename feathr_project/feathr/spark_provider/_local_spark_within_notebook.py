@@ -88,7 +88,6 @@ class _FeathrLocalSparkJobWithinNotebookLauncher(SparkJobLauncher):
         # Get conf and package arguments
         cfg = configuration.copy() if configuration else {}
         maven_dependency = f"{cfg.pop('spark.jars.packages', self.packages)},{get_maven_artifact_fullname()}"
-        # spark_args = self._init_args(job_name=job_name, confs=cfg)
         spark_args = []
 
         # TODO: currently everything is forced to set as UDF; we need to test the other path
@@ -146,72 +145,12 @@ class _FeathrLocalSparkJobWithinNotebookLauncher(SparkJobLauncher):
         """This function track local spark job commands and process status.
         Files will be write into `debug` folder under your workspace.
         """
-        logger.info(f"{self.spark_job_num} local spark job(s) in this Launcher, only the latest will be monitored.")
-        logger.info(f"Please check auto generated spark command in {self.cmd_file} and detail logs in {self.log_path}.")
+        pass
 
-        proc = self.latest_spark_proc
-        start_time = time.time()
-        retry = self.retry
-
-        log_read = open(f"{self.log_path}_{self.spark_job_num-1}.txt", "r")
-        while proc.poll() is None and (((timeout_seconds is None) or (time.time() - start_time < timeout_seconds))):
-            time.sleep(1)
-            try:
-                if retry < 1:
-                    logger.warning(
-                        f"Spark job has hang for {self.retry * self.retry_sec} seconds. latest msg is {last_line}. \
-                            Please check {log_read.name}"
-                    )
-                    if self.clean_up:
-                        self._clean_up()
-                        proc.wait()
-                    break
-                last_line = log_read.readlines()[-1]
-                retry = self.retry
-                if last_line == []:
-                    print("_", end="")
-                else:
-                    print(">", end="")
-                    if last_line.__contains__("Feathr Pyspark job completed"):
-                        logger.info(f"Pyspark job Completed")
-                        proc.terminate()
-            except IndexError as e:
-                print("x", end="")
-                time.sleep(self.retry_sec)
-                retry -= 1
-
-        job_duration = time.time() - start_time
-        log_read.close()
-
-        if proc.returncode == None:
-            logger.warning(
-                f"Spark job with pid {self.latest_spark_proc.pid} not completed after {timeout_seconds} sec \
-                    time out setting. Please check."
-            )
-            if self.clean_up:
-                self._clean_up()
-                proc.wait()
-                return True
-        elif proc.returncode == 1:
-            logger.warning(f"Spark job with pid {self.latest_spark_proc.pid} is not successful. Please check.")
-            return False
-        else:
-            logger.info(
-                f"Spark job with pid {self.latest_spark_proc.pid} finished in: {int(job_duration)} seconds \
-                    with returncode {proc.returncode}"
-            )
-            return True
-
-    def _clean_up(self, proc: Popen = None):
-        logger.warning(f"Terminate the spark job due to as clean_up is set to True.")
-        if not proc:
-            self.latest_spark_proc.terminate()
-        else:
-            proc.terminate()
 
     def get_status(self) -> str:
         """Get the status of the job, only a placeholder for local spark"""
-        return self.latest_spark_proc.returncode
+        pass
 
     def get_job_result_uri(self) -> str:
         """Get job output path
@@ -229,22 +168,6 @@ class _FeathrLocalSparkJobWithinNotebookLauncher(SparkJobLauncher):
         """
         return self.job_tags
 
-    def _init_args(self, job_name: str, confs: Dict[str, str]) -> List[str]:
-        logger.info(f"Spark job: {job_name} is running on local spark.")
-        args = [
-            "spark-submit",
-            "--name",
-            job_name,
-            "--conf",
-            "spark.hadoop.fs.wasbs.impl=org.apache.hadoop.fs.azure.NativeAzureFileSystem",
-            "--conf",
-            "spark.hadoop.fs.wasbs=org.apache.hadoop.fs.azure.NativeAzureFileSystem",
-        ]
-
-        for k, v in confs.items():
-            args.extend(["--conf", f"{k}={v}"])
-
-        return args
 
     def _get_debug_file_name(self, debug_folder: str = "debug", prefix: str = None):
         """Auto generated command will be write into cmd file.
