@@ -49,7 +49,9 @@ class _FeathrLocalSparkJobWithinNotebookLauncher(SparkJobLauncher):
         else:
             os.makedirs(os.path.dirname(dbfs_path), exist_ok=True)
             shutil.copy(local_path_or_http_path, dbfs_path)
-        return dbfs_path
+        returned_dbfs = "dbfs:" +local_path_or_http_path
+        print("returned_dbfs, local_path_or_http_path, dbfs_path",returned_dbfs, local_path_or_http_path, dbfs_path)
+        return returned_dbfs
 
     def submit_feathr_job(
         self,
