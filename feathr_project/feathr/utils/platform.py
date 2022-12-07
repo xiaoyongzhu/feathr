@@ -4,6 +4,23 @@ Refs: https://github.com/microsoft/recommenders/blob/main/recommenders/utils/not
 from pathlib import Path
 
 
+def is_spark_notebook() -> bool:
+    """Check if the module is running on Jupyter notebook/console.
+    Note - there might be better way to check if the code is running on a jupyter notebook or not,
+    but this hacky way still works.
+
+    Ref:
+        https://stackoverflow.com/questions/15411967/how-can-i-check-if-code-is-executed-in-the-ipython-notebook
+
+    Returns:
+        bool: True if the module is running on Jupyter notebook or Jupyter console, False otherwise.
+    """
+    if 'spark' in locals():
+        # TODO: should check the type of `spark`, make sure it's pyspark.sql.session.SparkSession type
+        return True
+    else:
+        return False
+
 def is_jupyter() -> bool:
     """Check if the module is running on Jupyter notebook/console.
     Note - there might be better way to check if the code is running on a jupyter notebook or not,
