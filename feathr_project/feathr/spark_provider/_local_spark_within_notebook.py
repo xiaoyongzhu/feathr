@@ -40,7 +40,7 @@ class _FeathrLocalSparkJobWithinNotebookLauncher(SparkJobLauncher):
         """For Local Spark Case, no need to upload to cloud workspace."""
         # /dbfs/feathr_getting_started2/feature_join.conf
         import shutil, os
-        dbfs_path = os.path.join("/dbfs",local_path_or_http_path)
+        dbfs_path = "/dbfs" +local_path_or_http_path
         os.makedirs(os.path.dirname(dbfs_path), exist_ok=True)
         shutil.copyfile(local_path_or_http_path, dbfs_path)
         return dbfs_path
