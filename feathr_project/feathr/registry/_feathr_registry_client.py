@@ -278,7 +278,7 @@ class _FeatureRegistry(FeathrRegistry):
                     definitions.features.add(feature)
                     definitions.transformations.add(vars(feature)["transform"])
                 else:
-                    raise RuntimeError("Object cannot be parsed.")
+                    raise RuntimeError(f"Object cannot be parsed. Feature is {feature.name}")
 
         return definitions
 
