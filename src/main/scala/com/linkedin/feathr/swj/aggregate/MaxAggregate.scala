@@ -27,8 +27,9 @@ class MaxAggregate(val metricCol: String) extends AggregationSpec {
         case LongType => math.max(aggregate.asInstanceOf[Long], record.asInstanceOf[Long])
         case DoubleType => math.max(aggregate.asInstanceOf[Double], record.asInstanceOf[Double])
         case FloatType => math.max(aggregate.asInstanceOf[Float], record.asInstanceOf[Float])
+        case DecimalType() => BigDecimal(math.max(aggregate.toString.toFloat, record.toString.toFloat).toString)
         case _ => throw new RuntimeException(s"Invalid data type for MAX metric col $metricCol. " +
-          s"Only Int, Long, Double, and Float are supported, but got ${dataType.typeName}")
+          s"Only Int, Long, Double, Float and Decimal() are supported, but got ${dataType.typeName}")
       }
     }
   }
