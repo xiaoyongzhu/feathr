@@ -29,23 +29,16 @@ class FeathrRegistry(ABC):
         pass
 
     @abstractmethod
-    def delete_project(self, project_name: str):
+    def list_dependent_entities(self, qualified_name: str):
         """
-        Deletes project given project name. Project name must not be empty.
-        """
-        pass
-
-    @abstractmethod
-    def delete_anchored_feature(self, project_name: str, anchor_name: str, feature_name: str):
-        """
-        Deletes anchor feature
+        Returns list of dependent entities for provided entity
         """
         pass
 
     @abstractmethod
-    def delete_derived_feature(self, project_name: str, feature_name: str):
+    def delete_entity(self, qualified_name: str):
         """
-        Deletes derived feature
+        Deletes entity if it has no dependent entities
         """
         pass
 
