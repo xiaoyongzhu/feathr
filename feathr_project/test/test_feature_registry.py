@@ -14,7 +14,7 @@ from feathr.client import FeathrClient
 from feathr.registry._feathr_registry_client import _FeatureRegistry
 from feathrcli.cli import init
 from test_fixture import registry_test_setup
-from test_fixture import registry_test_setup_append, registry_test_setup_partially
+from test_fixture import registry_test_setup_append, registry_test_setup_partially, registry_test_setup_for_409
 from test_utils.constants import Constants
 
 class FeatureRegistryTests(unittest.TestCase):
@@ -58,6 +58,15 @@ class FeatureRegistryTests(unittest.TestCase):
 
                 # Sync workspace from registry, will get all conf files back
                 client.get_features_from_registry(client.project_name)
+                
+                # Register the same feature with different definition and expect an error.
+                client: FeathrClient = registry_test_setup_for_409(os.path.join(test_workspace_dir, config_path), client.project_name)
+
+                with pytest.raises(RuntimeError) as exc_info:
+                    client.register_features()
+                
+                # <ExceptionInfo RuntimeError('Failed to call registry API, status is 409, error is {"message":"Entity feathr_ci_registry_53_3_476999__request_features__f_is_long_trip_distance already exists"}')
+            assert "status is 409" in str(exc_info.value)
 
     def test_feathr_register_features_partially(self):
         """
@@ -69,8 +78,8 @@ class FeatureRegistryTests(unittest.TestCase):
         client: FeathrClient = registry_test_setup(os.path.join(test_workspace_dir, "feathr_config.yaml"))
         client.register_features()
         time.sleep(30)
-        full_registration = client.get_features_from_registry(client.project_name)
-
+        full_registration, keys = client.get_features_from_registry(client.project_name, return_keys = True, verbose = True)
+        assert len(keys['f_location_avg_fare']) == 2
         now = datetime.now()
         os.environ["project_config__project_name"] =  ''.join(['feathr_ci_registry','_', str(now.minute), '_', str(now.second), '_', str(now.microsecond)])
 

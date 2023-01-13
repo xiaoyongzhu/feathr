@@ -1,7 +1,7 @@
 import copy
 from http.client import CONFLICT, HTTPException
 import itertools
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union, List, Dict
 from urllib.error import HTTPError
 from uuid import UUID
 
@@ -29,6 +29,13 @@ TYPEDEF_ANCHOR_FEATURE="feathr_anchor_feature_v1"
 TYPEDEF_ARRAY_ANCHOR=f"array<feathr_anchor_v1>"
 TYPEDEF_ARRAY_DERIVED_FEATURE=f"array<feathr_derived_feature_v1>"
 TYPEDEF_ARRAY_ANCHOR_FEATURE=f"array<feathr_anchor_feature_v1>"
+
+class ConflictError(Exception):
+    pass
+
+class PreconditionError(Exception):
+    pass
+
 class PurviewRegistry(Registry):
     def __init__(self,azure_purview_name: str, registry_delimiter: str = "__", credential=None,register_types = True):
         self.registry_delimiter = registry_delimiter
@@ -45,7 +52,7 @@ class PurviewRegistry(Registry):
         if register_types:
             self._register_feathr_feature_types()
 
-    def get_projects(self) -> list[str]:
+    def get_projects(self) -> List[str]:
         """
         Returns the names of all projects
         """
@@ -54,7 +61,7 @@ class PurviewRegistry(Registry):
         result_entities = result['value']
         return [x['qualifiedName'] for x in result_entities]
 
-    def get_projects_ids(self) -> dict:
+    def get_projects_ids(self) -> Dict:
         """
         Returns the names and ids of all projects"""
         searchTerm = {"entityType": str(EntityType.Project)}
@@ -110,7 +117,7 @@ class PurviewRegistry(Registry):
             
         return base_entity
                 
-    def get_entities(self, ids: list[UUID],recursive=False) -> list[Entity]:
+    def get_entities(self, ids: List[UUID],recursive=False) -> List[Entity]:
         """
         Get list of entities by their ids
         """
@@ -125,7 +132,7 @@ class PurviewRegistry(Registry):
         # It is a name
         return self._get_id_by_qualfiedName(id_or_name)
     
-    def get_all_neighbours(self,id_or_name: Union[str, UUID]) -> list[Edge]:
+    def get_all_neighbours(self,id_or_name: Union[str, UUID]) -> List[Edge]:
         entity = self.get_entity(id_or_name)
         relation_lookup = {x.name.upper():x for x in RelationshipType}
         related_entities = self.purview_client.get_entity_lineage(str(entity.id),direction="BOTH")['guidEntityMap']        
@@ -155,7 +162,7 @@ class PurviewRegistry(Registry):
              for x in out_edges])
         return result_edges
 
-    def get_neighbors(self, id_or_name: Union[str, UUID], relationship: RelationshipType) -> list[Edge]:
+    def get_neighbors(self, id_or_name: Union[str, UUID], relationship: RelationshipType) -> List[Edge]:
         """
         Get list of edges with specified type that connect to this entity.
         The edge contains fromId and toId so we can follow to the entity it connects to
@@ -192,7 +199,7 @@ class PurviewRegistry(Registry):
             upstream_entities + downstream_entities,
             upstream_edges + downstream_edges)
     
-    def get_dependent_entities(self, entity_id: Union[str, UUID]) -> list[Entity]:
+    def get_dependent_entities(self, entity_id: Union[str, UUID]) -> List[Entity]:
         """
         Given entity id, returns list of all entities that are downstream/dependent on given entity
         """
@@ -221,7 +228,7 @@ class PurviewRegistry(Registry):
         #Delete entity
         self.purview_client.delete_entity(str(entity_id))
 
-    def _get_edges(self, ids: list[UUID]) -> list[Edge]:
+    def _get_edges(self, ids: List[UUID]) -> List[Edge]:
         all_edges = set()
         for id in ids:
             neighbours = self.get_all_neighbours(id)
@@ -235,7 +242,7 @@ class PurviewRegistry(Registry):
         names = name.split(self.registry_delimiter)
         return Edge(guid, names[1], names[2], RelationshipType.new(names[0]))
 
-    def get_project_features(self, project:str, keywords:Optional[str] = None) -> list[Entity]:
+    def get_project_features(self, project:str, keywords:Optional[str] = None) -> List[Entity]:
         project_id = self.get_entity_id(project)
         if not project_id:
             return None
@@ -306,8 +313,8 @@ class PurviewRegistry(Registry):
 
     def search_entity(self,
                       keyword: str,
-                      type: list[EntityType],
-                      project: Optional[Union[str, UUID]] = None) -> list[EntityRef]:
+                      type: List[EntityType],
+                      project: Optional[Union[str, UUID]] = None) -> List[EntityRef]:
         """
         Search entities with specified type that also match the keyword in a project
         """
@@ -319,7 +326,7 @@ class PurviewRegistry(Registry):
             entity_type = entity['entityType']
             if type and entity_type in [str(x) for x in type]:
                 if project:
-                    if not (qualified_name.startswith(project) or entity_id == str(project)):
+                    if not (qualified_name.startswith(str(project)) or entity_id == str(project)):
                         continue
                 result.append(EntityRef(UUID(entity_id),entity_type,qualified_name))
         return result
@@ -455,7 +462,7 @@ class PurviewRegistry(Registry):
             + consume_produce_pairs)
         
         return derived_feature_entity.id
-    def _bfs(self, id: UUID, conn_type: RelationshipType) -> Tuple[list[Entity], list[Edge]]:
+    def _bfs(self, id: UUID, conn_type: RelationshipType) -> Tuple[List[Entity], List[Edge]]:
         """
         Breadth first traversal
         Starts from `id`, follow edges with `conn_type` only.
@@ -479,7 +486,7 @@ class PurviewRegistry(Registry):
 
         
     
-    def _bfs_step(self, ids: list[UUID], conn_type: RelationshipType) -> list[Edge]:
+    def _bfs_step(self, ids: List[UUID], conn_type: RelationshipType) -> List[Edge]:
         """
         One step of the BFS process
         Returns all edges that connect to node ids the next step
@@ -600,7 +607,7 @@ class PurviewRegistry(Registry):
             force_update=True)
         logger.info("Feathr Feature Type System Initialized.")
 
-    def _upload_entity_batch(self, entity_batch:list[AtlasEntity]):
+    def _upload_entity_batch(self, entity_batch:List[AtlasEntity]):
         # we only support entity creation, update is not supported. 
         # setting lastModifiedTS ==0 will ensure this, if another entity with ts>=1 exist
         # upload function will fail with 412 Precondition fail.
@@ -612,13 +619,12 @@ class PurviewRegistry(Registry):
             """
             Try to find existing entity/process first, if found, return the existing entity's GUID
             """
-            id = self.get_entity_id(entity.qualifiedName)
-            response =  self.purview_client.get_entity(id)['entities'][0]
+            response =  self.purview_client.get_entity(qualifiedName=entity.qualifiedName, typeName=entity.typeName)['entities'][0]
             j = entity.to_json()
             if j["typeName"] == response["typeName"]:
                 if j["typeName"] == "Process":
                     if response["attributes"]["qualifiedName"] != j["attributes"]["qualifiedName"]:
-                        raise RuntimeError("The requested entity %s conflicts with the existing entity in PurView" % j["attributes"]["qualifiedName"])
+                        raise ConflictError("The requested entity %s conflicts with the existing entity in PurView" % j["attributes"]["qualifiedName"])
                 else:
                     if "type" in response['attributes'] and response["typeName"] in (TYPEDEF_ANCHOR_FEATURE, TYPEDEF_DERIVED_FEATURE):
                         conf = ConfigFactory.parse_string(response['attributes']['type'])
@@ -627,23 +633,30 @@ class PurviewRegistry(Registry):
                     keys.add("qualifiedName")
                     for k in keys:
                         if response["attributes"][k] != j["attributes"][k]:
-                            raise RuntimeError("The requested entity %s conflicts with the existing entity in PurView" % j["attributes"]["qualifiedName"])
+                            raise ConflictError("The requested entity %s conflicts with the existing entity in PurView" % j["attributes"]["qualifiedName"])
                 entity.guid = response["guid"]
                 return
             else:
-                raise RuntimeError("The requested entity %s conflicts with the existing entity in PurView" % j["attributes"]["qualifiedName"])
+                raise ConflictError("The requested entity %s conflicts with the existing entity in PurView" % j["attributes"]["qualifiedName"])
         except AtlasException as e:
+            pass
+        except KeyError as e:
+            # This is because the response is empty when the entity is not found
             pass
 
         entity.lastModifiedTS="0"
-        results = self.purview_client.upload_entities(
-            batch=entity)
+        results = None
+        try:
+            results = self.purview_client.upload_entities(
+                batch=entity)
+        except AtlasException as e:
+            raise PreconditionError("Feature registration failed.", e)
         if results:
             d = {x.guid: x for x in [entity]}
             for k, v in results['guidAssignments'].items():
                 d[k].guid = v
         else:
-            raise RuntimeError("Feature registration failed.", results)
+            raise PreconditionError("Feature registration failed.", results)
             
     def _generate_fully_qualified_name(self, segments):
         return self.registry_delimiter.join(segments)

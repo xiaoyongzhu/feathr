@@ -3,33 +3,45 @@ import os
 from setuptools import setup, find_packages
 from pathlib import Path
 
+
 # Use the README.md from /docs
 root_path = Path(__file__).resolve().parent.parent
-long_description = (root_path / "docs/README.md").read_text(encoding="utf8")
+readme_path = root_path / "docs/README.md"
+if readme_path.exists():
+    long_description = readme_path.read_text(encoding="utf8")
+else:
+    # In some build environments (specifically in conda), we may not have the README file
+    # readily available. In these cases, just set long_description to the URL of README.md.
+    long_description = "See https://github.com/feathr-ai/feathr/blob/main/docs/README.md"
 
 try:
     exec(open("feathr/version.py").read())
 except IOError:
     print("Failed to load Feathr version file for packaging.",
           file=sys.stderr)
-    sys.exit(-1)
+    # Temp workaround for conda build. For long term fix, Jay will need to update manifest.in file.
+    VERSION = "0.9.0"
 
 VERSION = __version__  # noqa
-os.environ["FEATHR_VERSION]"] = VERSION
+os.environ["FEATHR_VERSION"] = VERSION
 
 extras_require=dict(
     dev=[
         "black>=22.1.0",    # formatter
         "isort",            # sort import statements
         "pytest>=7",
+        "pytest-cov",
         "pytest-xdist",
         "pytest-mock>=3.8.1",
     ],
     notebook=[
-        "jupyter==1.0.0",
-        "matplotlib==3.6.1",
+        "azure-cli==2.37.0",
+        "jupyter>=1.0.0",
+        "matplotlib>=3.6.1",
         "papermill>=2.1.2,<3",      # to test run notebooks
         "scrapbook>=0.5.0,<1.0.0",  # to scrap notebook outputs
+        "scikit-learn",             # for notebook examples
+        "plotly",                   # for plotting
     ],
 )
 extras_require["all"] = list(set(sum([*extras_require.values()], [])))
@@ -52,7 +64,8 @@ setup(
         "click<=8.1.3",
         "py4j<=0.10.9.7",
         "loguru<=0.6.0",
-        "pandas<=1.5.0",
+        "pandas>=1.5.0",
+        "numpy<=1.20.3",  # pin numpy due to pyspark's deprecated np.bool access
         "redis<=4.4.0",
         "requests<=2.28.1",
         "tqdm<=4.64.1",
@@ -72,6 +85,8 @@ setup(
         "avro<=1.11.1",
         "azure-storage-file-datalake<=12.5.0",
         "azure-synapse-spark<=0.7.0",
+        # Synapse's aiohttp package is old and does not work with Feathr. We pin to a newer version here.
+        "aiohttp==3.8.3",
         # fixing Azure Machine Learning authentication issue per https://stackoverflow.com/a/72262694/3193073
         "azure-identity>=1.8.0",
         "azure-keyvault-secrets<=4.6.0",
