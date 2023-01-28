@@ -84,7 +84,14 @@ docker build -f FeathrSandbox.Dockerfile -t feathrfeaturestore/feathr-sandbox .
 
 
 ## For Feathr Developers
-The Feathr package is copied to the user folder, and is installed with `pip install -e` option, which means you can do interactive development in the python package. For example you want to validate changes, instead of setting up the environment, you can simply go to the 
+
+Feathr Sandbox is ideal for local development purpose as well, as it provides a simplified environment which you can use. There are a few use cases where the Feathr developers can benefit from the Feathr Sandbox:
+
+### Python Client Development
+
+For folks who are changing the code on the Feathr Python client side (i.e. files under the [`feathr_project` folder](../feathr_project/)), Feathr Sandbox has this python client pre-installed with `pip install -e` option, which means you can do interactive development in the python package. For example you want to validate changes, instead of setting up the environment, you can simply go to the folder and edit those files. In those cases, the Feathr client installation in the python environment will reload automatically.
+
+![Feathr Sandbox Edit](./images/feathr-sandbox-edit-file.png)
 
 
 note that if you are using Jupyter notebook to run the code, make sure you restart jupyter notebook so the kernel can reload Feathr package.
