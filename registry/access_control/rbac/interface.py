@@ -1,8 +1,18 @@
 from abc import ABC, abstractmethod
-from rbac.models import UserRole
+from rbac.models import Organization, User, OrganizationUser, UserRole
 
 
 class RBAC(ABC):
+    @abstractmethod
+    def add_organization(self, organization: Organization):
+        """Add a Organization"""
+        pass
+
+    @abstractmethod
+    def add_user(self, user: User):
+        """Add a user"""
+        pass
+
     @abstractmethod
     def _get_userroles(self) -> list[UserRole]:
         """Get List of All User Role Records

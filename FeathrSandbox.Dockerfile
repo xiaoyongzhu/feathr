@@ -28,14 +28,14 @@ COPY ./deploy/nginx.conf /etc/nginx/nginx.conf
 # always install feathr from main
 WORKDIR /home/jovyan/work
 COPY --chown=1000:100 ./feathr_project ./feathr_project
-RUN python -m pip install  -e ./feathr_project
+RUN python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -e ./feathr_project
 
 
 # Registry Section
 # install registry
 COPY ./registry /usr/src/registry
 WORKDIR /usr/src/registry/sql-registry
-RUN pip install -r requirements.txt
+RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 
 
@@ -55,8 +55,8 @@ COPY --chown=1000:100 ./docs/samples/local_quickstart_notebook.ipynb .
 COPY --chown=1000:100 ./feathr-sandbox/feathr_init_script.py .
 
 # Run the script so that maven cache can be added for better experience. Otherwise users might have to wait for some time for the maven cache to be ready.
-RUN python feathr_init_script.py
-RUN python -m pip install interpret
+# RUN python feathr_init_script.py
+# RUN python -m pip install interpret
 
 USER root
 WORKDIR /usr/src/registry
@@ -68,7 +68,7 @@ RUN sed -i "s/\r//g" /usr/src/registry/start_local.sh
 
 # install a Kafka single node instance
 # Reference: https://www.looklinux.com/how-to-install-apache-kafka-single-node-on-ubuntu/
-RUN wget https://downloads.apache.org/kafka/3.3.1/kafka_2.12-3.3.1.tgz && tar xzf kafka_2.12-3.3.1.tgz && mv kafka_2.12-3.3.1 /usr/local/kafka && rm kafka_2.12-3.3.1.tgz
+# RUN wget https://downloads.apache.org/kafka/3.3.1/kafka_2.12-3.3.1.tgz && tar xzf kafka_2.12-3.3.1.tgz && mv kafka_2.12-3.3.1 /usr/local/kafka && rm kafka_2.12-3.3.1.tgz
 
 # /usr/local/kafka/bin/zookeeper-server-start.sh /usr/local/kafka/config/zookeeper.properties
 # /usr/local/kafka/bin/kafka-server-start.sh  /usr/local/kafka/config/server.properties
