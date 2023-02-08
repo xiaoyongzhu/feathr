@@ -19,7 +19,7 @@ const HeaderWidget = (props: HeaderWidgetProps) => {
   return (
     <Dropdown overlay={<HeaderWidgetMenu instance={instance} />}>
       <div className="dropdown-trigger">
-        <Avatar size="small" style={{ marginRight: 4 }} icon={<UserOutlined />} />
+        <Avatar size={34} style={{ marginRight: 4 }} icon={<UserOutlined />} />
         <span>{username}</span>
       </div>
     </Dropdown>

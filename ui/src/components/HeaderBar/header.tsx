@@ -15,7 +15,7 @@ const Header = () => {
       <Layout.Header className={styles.header}>
         <span></span>
         <span className={styles.right}>
-          <HeaderWidget username={account?.username} />
+          <HeaderWidget username={account?.username || 'test 99999'} />
         </span>
       </Layout.Header>
       <div className={styles.vacancy} />

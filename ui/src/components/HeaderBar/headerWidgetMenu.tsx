@@ -3,6 +3,7 @@ import React from 'react'
 import { LogoutOutlined } from '@ant-design/icons'
 import { IPublicClientApplication } from '@azure/msal-browser'
 import { Menu, MenuProps } from 'antd'
+import { useNavigate } from 'react-router-dom'
 
 interface HeaderWidgetMenuProps {
   instance: IPublicClientApplication
@@ -22,6 +23,7 @@ const HeaderWidgetMenu = (props: HeaderWidgetMenuProps) => {
     instance.logoutRedirect().catch((e) => {
       console.error(e)
     })
+    window.location.href = '/login'
   }
 
   const onClick: MenuProps['onClick'] = ({ key }) => {

@@ -7,7 +7,8 @@ import {
   EyeOutlined,
   HomeOutlined,
   ProjectOutlined,
-  RocketOutlined
+  RocketOutlined,
+  UserOutlined
 } from '@ant-design/icons'
 import { Layout, Menu, Typography } from 'antd'
 import { Link, useLocation } from 'react-router-dom'
@@ -29,6 +30,11 @@ const menuItems = [
     key: '',
     icon: <HomeOutlined style={{ fontSize: '20px', color: '#e28743' }} />,
     label: <Link to="/">Home</Link>
+  },
+  {
+    key: 'users',
+    icon: <UserOutlined style={{ fontSize: '20px', color: '#abcdff' }} />,
+    label: <Link to="/users">Users</Link>
   },
   {
     key: 'projects',
