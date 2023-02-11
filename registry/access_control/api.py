@@ -1,15 +1,41 @@
 import json
 from typing import Optional
-import requests
-from fastapi import APIRouter, Depends, Response
+
+import jwt
+from fastapi import APIRouter, Depends, Response, Header
 from rbac import config
 from rbac.access import *
 from rbac.db_rbac import DbRBAC
 from rbac.models import User
 
+from iam.orm_iam import OrmIAM, secret_key, ALGORITHM
+from iam.models import AddOrganization, RegisterUser, UserLogin
+iam = OrmIAM()
+
 router = APIRouter()
 rbac = DbRBAC()
 registry_url = config.RBAC_REGISTRY_URL
+
+
+class ResponseWrapper:
+    def __init__(self, data, status='SUCCESS', message='Success'):
+        self.status = status
+        self.data = data
+        self.message = message
+
+
+def get_current_user(x_token: str = Header(None)):
+    if x_token is None:
+        raise HTTPException(status_code=400, detail="X-Token header is missing")
+    try:
+        decoded_token = jwt.decode(x_token, secret_key, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        print(jwt.PyJWTError)
+        raise HTTPException(status_code=400, detail="Invalid token")
+    user_id = decoded_token.get("sub")
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="User not found in token")
+    return user_id
 
 
 @router.get('/projects', name="Get a list of Project Names [No Auth Required]")
@@ -134,6 +160,50 @@ def add_userrole(project: str, user: str, role: str, reason: str, access: UserAc
 @router.delete("/users/{user}/userroles/delete", name="Delete a user role [Project Manage Access Required]")
 def delete_userrole(user: str, role: str, reason: str, access: UserAccess = Depends(project_manage_access)):
     return rbac.delete_userrole(access.project_name, user, role, reason, access.user_name)
+
+
+# Below are IAM management APIs
+
+
+@router.post("/signup", name="Register a new User")
+def register_user(user: RegisterUser):
+    return ResponseWrapper(iam.signup(user))
+
+
+@router.post("/login", name="User login")
+def register_user(user_login: UserLogin):
+    return ResponseWrapper(iam.login(user_login.email, user_login.password))
+
+
+@router.post("/users/email/check", name="Check Email if exists")
+def register_user(email: str):
+    return ResponseWrapper(iam.get_user_by_email(email))
+
+
+@router.post("/organizations", name="Add a new Organization")
+def add_organization(organization: AddOrganization):
+    return ResponseWrapper(iam.add_organization(organization))
+
+
+@router.post("/organizations/{organization_id}/invite", name="Invite a User")
+def invite_user(organization_id: str, email: str, role: str = 'USER', operator_id: str = Depends(get_current_user)):
+    return ResponseWrapper(iam.invite_user(organization_id, email, role, operator_id))
+
+
+@router.get("/organizations/{organization_id}/users", name="Get all users of organization")
+def add_organization(organization_id: str, keyword: str = None, page_size: int = 20, page_no: int = 1):
+    return ResponseWrapper(iam.get_users(organization_id, keyword, page_size, page_no))
+
+
+@router.delete("/organizations/{organization_id}/users/{user_id}", name="Remove user from organization")
+def delete_organization_user(organization_id: str, user_id: str, operator_id: str = Depends(get_current_user)):
+    iam.remove_organization_user(organization_id, user_id, operator_id)
+    return ResponseWrapper(True)
+
+
+@router.delete("/organizations/{organization_id}", name="Delete a organization")
+def delete_organization(organization_id: str):
+    return iam.delete_organization(organization_id)
 
 
 def check(r):

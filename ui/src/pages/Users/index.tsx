@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 
 import { PageHeader } from 'antd'
 
-import ProjectTable from './components/ProjectTable'
+import ProjectTable from './components/UserTable'
 import SearchBar from './components/SearchBar'
 
 const Projects = () => {

@@ -1,13 +1,37 @@
 import React from 'react'
 
 import { LockOutlined, UserOutlined, AlipayOutlined } from '@ant-design/icons'
-import { Button, Checkbox, Form, Input, Row, Col } from 'antd'
+import { Button, Checkbox, Form, Input, Row, Col, message } from 'antd'
+import { login } from '@/api'
 
+import { useNavigate } from 'react-router-dom'
 import styles from './index.module.less'
+import {LoginModel} from '@/models/model'
 
 const App: React.FC = () => {
-  const onFinish = (values: any) => {
-    console.log('Received values of form: ', values)
+  const navigate = useNavigate()
+  const onFinish = (values: LoginModel) => {
+    if (!values.email || !values.password) {
+      return
+    }
+    login(values).then(response => {
+      let data = response.data
+      if (data.status !== 'SUCCESS') {
+        message.warning(response.data.message).then()
+        return
+      }
+      data = data.data
+      if (data.organizations.length === 0) {
+        // todo: This user does not have any organizations, need redirect no organization page!
+        return
+      }
+
+      // todo: Need store the token
+      let token = data.token
+
+      // todo: The navigation bar will not be visible after direct
+      navigate(`/`)
+    })
   }
 
   return (
@@ -22,12 +46,12 @@ const App: React.FC = () => {
           onFinish={onFinish}
         >
           <Form.Item
-            name="username"
-            rules={[{ required: true, message: 'Please input your Username!' }]}
+            name="email"
+            rules={[{ required: true, message: 'Please input your Email!' }]}
           >
             <Input
               prefix={<UserOutlined className="site-form-item-icon" />}
-              placeholder="Username"
+              placeholder="Email"
             />
           </Form.Item>
           <Form.Item
@@ -55,9 +79,6 @@ const App: React.FC = () => {
               type="primary"
               htmlType="submit"
               className="login-form-button"
-              onClick={() => {
-                window.location.href = '/'
-              }}
             >
               Login
             </Button>

@@ -5,12 +5,12 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-# class User(BaseModel):
-#     id: str
-#     name: str
-#     username: str
-#     type: str
-#     roles: List[str]
+class User(BaseModel):
+    id: str
+    name: str
+    username: str
+    type: str
+    roles: List[str]
 
 class UserType(str, Enum):
     AAD_USER = "aad_user",
@@ -42,48 +42,6 @@ RoleAccessMapping = {
     RoleType.DEFAULT: []
 }
 
-
-class Organization():
-    def __init__(self,
-                 id: str,
-                 name: str,
-                 status: str,
-                 create_time: datetime,
-                 update_time: datetime):
-        self.id = id
-        self.name = name
-        self.status = status
-        self.create_time: create_time
-        self.update_time: update_time
-
-
-class User():
-    def __init__(self,
-                 id: str,
-                 email: str,
-                 password: str,
-                 phone: str,
-                 type: str,
-                 status: str,
-                 create_time: datetime,
-                 update_time: datetime):
-        self.id = id
-        self.email = email
-        self.password = password
-        self.phone = phone
-        self.type = type
-        self.status = status
-        self.create_time = create_time
-        self.update_time = update_time
-
-class OrganizationUser():
-    def __init__(self,
-                 id: str,
-                 organization_id: str,
-                 user_id: str):
-        self.id = id
-        self.organization_id = organization_id
-        self.user_id = user_id
 
 class UserRole():
     def __init__(self,

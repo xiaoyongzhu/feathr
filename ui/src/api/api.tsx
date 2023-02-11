@@ -8,7 +8,7 @@ import {
   Role,
   UserRole,
   NewFeature,
-  NewDatasource
+  NewDatasource, LoginModel, SignupModel
 } from '@/models/model'
 import { getMsalConfig } from '@/utils/utils'
 
@@ -273,5 +273,60 @@ export const createSource = async (project: string, datasource: NewDatasource) =
     .post(`${getApiBaseUrl()}/projects/${project}/datasources`, datasource)
     .then((response) => {
       return response
+    })
+}
+
+export const signup = async (data: SignupModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios
+    .post(`${getApiBaseUrl()}/signup`, data)
+    .then((response) => {
+      return response
+    })
+}
+
+export const login = async (data: LoginModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios
+    .post(`${getApiBaseUrl()}/login`, data)
+    .then((response) => {
+      return response
+    })
+}
+
+export const fetchUsers = async (organizationId: string, keyword: string) => {
+  const axios = await authAxios(msalInstance)
+  return axios
+    .get<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/users`, {
+      headers: {},
+      params: { keyword: keyword }
+    })
+    .then((response) => {
+      console.log(response.data)
+      return response.data
+    })
+}
+
+export const inviteUser = async (organizationId: string, email: string, role: string) => {
+  const axios = await authAxios(msalInstance)
+  // todo: need add x_token
+  return axios
+    .delete<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/invite?email=${email}&role=${role}`, {
+      headers: {'X-Token':'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiN2Q0MGUxYS01ZGY4LTQzMjEtOGRmNy01NjVmYjdlNGFkYjIiLCJleHAiOjE2NzY1MzcyNjksIm5hbWUiOiJvcmdfZmVhdGhyNkAxNjMuY29tIiwib3JnYW5pemF0aW9ucyI6W3sib3JnYW5pemF0aW9uX2lkIjoiYTFjY2YxMTItMzM2Ny00YzEzLThjMzgtYjRhODU1NTQ5N2MyIiwib3JnYW5pemF0aW9uX25hbWUiOiJvcmdfZmVhdGhyNiIsInJvbGUiOiJNQU5BR0VSIn1dfQ.sO_M5awd6j0j8siad8eh1kBLY73HXcPeZ7A3B2L34dE'}
+    })
+    .then((response) => {
+      return response.data
+    })
+}
+
+export const removeUser = async (organizationId: string, userId: string) => {
+  const axios = await authAxios(msalInstance)
+  // todo: need add x_token
+  return axios
+    .delete<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/users/${userId}`, {
+      headers: {'X-Token':'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiN2Q0MGUxYS01ZGY4LTQzMjEtOGRmNy01NjVmYjdlNGFkYjIiLCJleHAiOjE2NzY1MzcyNjksIm5hbWUiOiJvcmdfZmVhdGhyNkAxNjMuY29tIiwib3JnYW5pemF0aW9ucyI6W3sib3JnYW5pemF0aW9uX2lkIjoiYTFjY2YxMTItMzM2Ny00YzEzLThjMzgtYjRhODU1NTQ5N2MyIiwib3JnYW5pemF0aW9uX25hbWUiOiJvcmdfZmVhdGhyNiIsInJvbGUiOiJNQU5BR0VSIn1dfQ.sO_M5awd6j0j8siad8eh1kBLY73HXcPeZ7A3B2L34dE'}
+    })
+    .then((response) => {
+      return response.data
     })
 }

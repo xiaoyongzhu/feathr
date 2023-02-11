@@ -2,6 +2,14 @@ export interface Project {
   name: string
 }
 
+export interface User {
+  id: string
+  name: string
+  email: string
+  phone: string
+  createTime: string
+}
+
 export interface Feature {
   attributes: FeatureAttributes
   displayText: string
@@ -157,6 +165,24 @@ export interface NewDatasource {
 
   sql?: string
   table?: string
+}
+
+export interface LoginModel {
+  email: string
+  password: string
+}
+
+export interface SignupModel {
+  email: string
+  password: string
+}
+
+export interface UserListModel {
+  id: string
+  email: string
+  role: string
+  create_time: string
+  update_time: string
 }
 
 export const ValueType = [

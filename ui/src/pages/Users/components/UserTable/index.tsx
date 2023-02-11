@@ -5,9 +5,9 @@ import { Button, Space, notification, Popconfirm, message } from 'antd'
 import { useQuery } from 'react-query'
 import { useNavigate } from 'react-router-dom'
 
-import { fetchProjects, deleteEntity } from '@/api'
+import {fetchProjects, deleteEntity, fetchUsers, removeUser} from '@/api'
 import ResizeTable, { ResizeColumnType } from '@/components/ResizeTable'
-import { Project } from '@/models/model'
+import { Project, User } from '@/models/model'
 
 import ChangeUser from '../InviteUser'
 
@@ -15,26 +15,21 @@ export interface ProjectTableProps {
   project?: string
 }
 const ProjectTable = (props: ProjectTableProps, ref: any) => {
+  const temp_organization_id = 'a1ccf112-3367-4c13-8c38-b4a8555497c2'
   const { project } = props
 
   const [open, setOpen] = useState<boolean>(false)
 
-  const changeUser = (userInfo: Project) => {
+  const changeUser = (userInfo: User) => {
     console.log('userInfo', userInfo)
     setOpen(true)
   }
 
-  const columns: ResizeColumnType<Project>[] = [
+  const columns: ResizeColumnType<User>[] = [
     {
       key: 'email',
       title: 'Email',
       dataIndex: 'email',
-      resize: false
-    },
-    {
-      key: 'phone',
-      title: 'Phone',
-      dataIndex: 'phone',
       resize: false
     },
     {
@@ -45,14 +40,14 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
     },
     {
       key: 'Crete Time',
-      title: 'Email',
-      dataIndex: 'email',
+      title: 'Crete Time',
+      dataIndex: 'create_time',
       resize: false
     },
     {
       key: 'Update Time',
-      title: 'Email',
-      dataIndex: 'email',
+      title: 'Update Time',
+      dataIndex: 'update_time',
       resize: false
     },
     {
@@ -60,8 +55,8 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
       title: 'Action',
       width: 240,
       resize: false,
-      render: (record: Project) => {
-        const { name } = record
+      render: (record: User) => {
+        const { name, id } = record
         return (
           <Space size="middle">
             <Button
@@ -78,7 +73,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
               placement="topRight"
               onConfirm={() => {
                 return new Promise((resolve) => {
-                  onDelete(name, resolve)
+                  onDelete(id, resolve)
                 })
               }}
             >
@@ -96,18 +91,25 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
     isLoading,
     data: tableData,
     refetch
-  } = useQuery<Project[]>(
+  } = useQuery<User[]>(
     ['Projects', project],
     async () => {
-      const reuslt = await fetchProjects()
-
-      return reuslt.reduce((list, item: string) => {
-        const text = project?.trim().toLocaleLowerCase()
-        if (!text || item.includes(text)) {
-          list.push({ name: item })
-        }
-        return list
-      }, [] as Project[])
+      // todo: keyword, and need parse result, content in the data
+      const result = await fetchUsers(temp_organization_id, '')
+      return []
+      // return result.reduce((list, item: string) => {
+      //   const text = project?.trim().toLocaleLowerCase()
+      //   if (!text || item.includes(text)) {
+      //     list.push({
+      //       name: item,
+      //       id: '',
+      //       email: '',
+      //       phone: '',
+      //       createTime: ''
+      //     })
+      //   }
+      //   return list
+      // }, [] as User[])
     },
     {
       retry: false,
@@ -117,8 +119,8 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
 
   const onDelete = async (entity: string, resolve: (value?: unknown) => void) => {
     try {
-      await deleteEntity(entity)
-      message.success('The project is deleted successfully.')
+      await removeUser(temp_organization_id, entity)
+      message.success('The user is deleted successfully.')
       refetch()
     } catch (e: any) {
       notification.error({

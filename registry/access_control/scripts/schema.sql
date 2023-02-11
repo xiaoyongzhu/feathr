@@ -15,7 +15,7 @@ create table userroles
 CREATE TABLE users (
   id VARCHAR(50) NOT NULL,
   email VARCHAR(50) NOT NULL,
-  password VARCHAR(50) NOT NULL,
+  password VARCHAR(64) NOT NULL,
   phone VARCHAR(50) NULL,
   status VARCHAR(50) NULL,
   create_time DATETIME NOT NULL,
@@ -26,6 +26,8 @@ CREATE TABLE users (
 CREATE TABLE organizations (
   id VARCHAR(50) NOT NULL,
   name VARCHAR(50) NOT NULL,
+  remark VARCHAR(255) NOT NULL,
+  status VARCHAR(50) NOT NULL,
   create_time DATETIME NOT NULL,
   update_time DATETIME NOT NULL,
   PRIMARY KEY (id),
@@ -36,6 +38,7 @@ CREATE TABLE organization_user (
   organization_id VARCHAR(50) NOT NULL,
   user_id VARCHAR(50) NOT NULL,
   role VARCHAR(50) NULL,
+  create_time DATETIME NOT NULL,
   PRIMARY KEY (id),
   CONSTRAINT organization_user_UNIQUE UNIQUE (organization_id ASC, user_id ASC) );
 
