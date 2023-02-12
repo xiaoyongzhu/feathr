@@ -2,7 +2,7 @@ import React, { forwardRef, useRef, useState } from 'react'
 
 import { Form, Input, Button } from 'antd'
 
-import InviteUser from '../ChangeUser'
+import InviteUser from '../InviteUser'
 
 export interface SearchBarProps {
   onSearch: (values: any) => void

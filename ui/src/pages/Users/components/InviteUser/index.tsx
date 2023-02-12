@@ -2,6 +2,8 @@ import React, { forwardRef, useRef } from 'react'
 
 import { Form, Modal, Input, Select } from 'antd'
 
+import { inviteUser } from '@/api'
+
 const { Option } = Select
 
 export interface InviteUserProps {
@@ -20,10 +22,12 @@ const InviteUser = (props: InviteUserProps, ref: any) => {
     setOpen(false)
   }
 
-  const onFinish = () => {
-    // todo: need add api logic
-    console.log('onFinish')
-    setOpen(false)
+  const onFinish = async () => {
+    const params = await form.getFieldsValue()
+    const { status } = await inviteUser(params)
+    if (status === 'SUCCESS') {
+      setOpen(false)
+    }
   }
 
   return (

@@ -2,22 +2,22 @@ import React from 'react'
 
 import { LockOutlined, UserOutlined, AlipayOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Form, Input, Row, Col, message } from 'antd'
-import { login } from '@/api'
+import Cookies from 'js-cookie'
 
-import { useNavigate } from 'react-router-dom'
+import { login } from '@/api'
+import { LoginModel } from '@/models/model'
+
 import styles from './index.module.less'
-import {LoginModel} from '@/models/model'
 
 const App: React.FC = () => {
-  const navigate = useNavigate()
   const onFinish = (values: LoginModel) => {
     if (!values.email || !values.password) {
       return
     }
-    login(values).then(response => {
+    login(values).then((response) => {
       let data = response.data
       if (data.status !== 'SUCCESS') {
-        message.warning(response.data.message).then()
+        message.warning(response.data.message)
         return
       }
       data = data.data
@@ -25,12 +25,17 @@ const App: React.FC = () => {
         // todo: This user does not have any organizations, need redirect no organization page!
         return
       }
-
-      // todo: Need store the token
-      let token = data.token
-
-      // todo: The navigation bar will not be visible after direct
-      navigate(`/`)
+      message.success('Login Success')
+      const token = data.token
+      Cookies.set('token', token, {
+        expires: 7
+      })
+      localStorage.setItem(
+        'temp_organization_id',
+        data?.organizations[0] ?? 'a1ccf112-3367-4c13-8c38-b4a8555497c2'
+      )
+      localStorage.setItem('user_name', values.email)
+      window.location.href = '/'
     })
   }
 
@@ -45,14 +50,8 @@ const App: React.FC = () => {
           size={'large'}
           onFinish={onFinish}
         >
-          <Form.Item
-            name="email"
-            rules={[{ required: true, message: 'Please input your Email!' }]}
-          >
-            <Input
-              prefix={<UserOutlined className="site-form-item-icon" />}
-              placeholder="Email"
-            />
+          <Form.Item name="email" rules={[{ required: true, message: 'Please input your Email!' }]}>
+            <Input prefix={<UserOutlined className="site-form-item-icon" />} placeholder="Email" />
           </Form.Item>
           <Form.Item
             name="password"
@@ -74,12 +73,7 @@ const App: React.FC = () => {
             </a>
           </div>
           <Form.Item>
-            <Button
-              block
-              type="primary"
-              htmlType="submit"
-              className="login-form-button"
-            >
+            <Button block type="primary" htmlType="submit" className="login-form-button">
               Login
             </Button>
           </Form.Item>

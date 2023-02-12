@@ -1,30 +1,45 @@
-import React from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 import { LockOutlined, UserOutlined, AimOutlined } from '@ant-design/icons'
-import {Button, Form, Input, Row, Col, message} from 'antd'
-
+import { Button, Form, Input, Row, Col, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
+
+import { signup } from '@/api'
+import { SignupModel } from '@/models/model'
+
 import styles from './index.module.less'
-import {signup} from '@/api'
-import {SignupModel} from '@/models/model'
 
 const App: React.FC = () => {
   const navigate = useNavigate()
-  const onFinish = (values: SignupModel) => {
-    console.log('Received values of form: ', values)
-    signup(values).then(response=>{
-      let data = response.data
-      if (data.status !== 'SUCCESS') {
-        message.warning(response.data.message).then()
-        return
-      }
-      message.info('Signup Success!').then(()=>{
-        navigate(`/login`)
+  const [form] = Form.useForm()
+  const [codeCheck, setCodeCheck] = useState<boolean>(false)
+  const [code, setCode] = useState<number>(0)
+  const onFinish = async () => {
+    const values = (await form.validateFields()) as SignupModel
+    setCodeCheck(false)
+    const response = await signup(values)
+    const data = response.data
+    if (data.status === 'SUCCESS') {
+      message.info('Signup Success!').then(() => {
+        navigate('/login')
       })
-    }).catch (error =>{
-      message.warning(error.message).then()
-    })
+    }
   }
+
+  const sendOpt = async () => {
+    setCodeCheck(true)
+    const values = await form.validateFields()
+    await signup(values)
+    setCode(60)
+  }
+
+  useEffect(() => {
+    if (code > 0) {
+      setTimeout(() => {
+        setCode(code - 1)
+      }, 1000)
+    }
+  }, [code])
 
   return (
     <div className={styles.loginBox}>
@@ -33,18 +48,13 @@ const App: React.FC = () => {
         <Form
           name="normal_login"
           className="login-form"
+          form={form}
           initialValues={{ remember: true }}
           size={'large'}
           onFinish={onFinish}
         >
-          <Form.Item
-            name="email"
-            rules={[{ required: true, message: 'Please input your Email!' }]}
-          >
-            <Input
-              prefix={<UserOutlined className="site-form-item-icon" />}
-              placeholder="email"
-            />
+          <Form.Item name="email" rules={[{ required: true, message: 'Please input your Email!' }]}>
+            <Input prefix={<UserOutlined className="site-form-item-icon" />} placeholder="email" />
           </Form.Item>
           <Form.Item
             name="password"
@@ -62,13 +72,15 @@ const App: React.FC = () => {
                 <Form.Item
                   noStyle
                   name="captcha"
-                  rules={[{ required: true, message: 'Please input the captcha you got!' }]}
+                  rules={[{ required: !codeCheck, message: 'Please input the captcha you got!' }]}
                 >
                   <Input placeholder="Please Input" prefix={<AimOutlined />} />
                 </Form.Item>
               </Col>
               <Col span={6}>
-                <Button block>Send</Button>
+                <Button block disabled={code > 0} onClick={sendOpt}>
+                  {code > 0 ? code : 'Send'}
+                </Button>
               </Col>
             </Row>
           </Form.Item>

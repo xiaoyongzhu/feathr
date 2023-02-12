@@ -1,14 +1,45 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 
 import { LockOutlined, UserOutlined, AimOutlined } from '@ant-design/icons'
-import { Button, Checkbox, Form, Input, Row, Col } from 'antd'
+import { Button, message, Form, Input, Row, Col } from 'antd'
+import { useNavigate } from 'react-router-dom'
+
+import { forgotPassword } from '@/api'
+import { ForgotPasswordModel } from '@/models/model'
 
 import styles from './index.module.less'
 
 const App: React.FC = () => {
-  const onFinish = (values: any) => {
-    console.log('Received values of form: ', values)
+  const navigate = useNavigate()
+  const [form] = Form.useForm()
+  const [codeCheck, setCodeCheck] = useState<boolean>(false)
+  const [code, setCode] = useState<number>(0)
+  const onFinish = async () => {
+    const values = (await form.validateFields()) as ForgotPasswordModel
+    setCodeCheck(false)
+    const response = await forgotPassword(values)
+    const data = response.data
+    if (data.status === 'SUCCESS') {
+      message.info('Signup Success!').then(() => {
+        navigate('/login')
+      })
+    }
   }
+
+  const sendOpt = async () => {
+    setCodeCheck(true)
+    const values = await form.validateFields()
+    await forgotPassword(values)
+    setCode(60)
+  }
+
+  useEffect(() => {
+    if (code > 0) {
+      setTimeout(() => {
+        setCode(code - 1)
+      }, 1000)
+    }
+  }, [code])
 
   return (
     <div className={styles.loginBox}>
@@ -36,13 +67,15 @@ const App: React.FC = () => {
                 <Form.Item
                   noStyle
                   name="captcha"
-                  rules={[{ required: true, message: 'Please input the captcha you got!' }]}
+                  rules={[{ required: !codeCheck, message: 'Please input the captcha you got!' }]}
                 >
                   <Input placeholder="Please Input" prefix={<AimOutlined />} />
                 </Form.Item>
               </Col>
               <Col span={6}>
-                <Button block>Send</Button>
+                <Button block disabled={code > 0} onClick={sendOpt}>
+                  Send
+                </Button>
               </Col>
             </Row>
           </Form.Item>

@@ -2,21 +2,21 @@ import React, { useState } from 'react'
 
 import { PageHeader } from 'antd'
 
-import ProjectTable from './components/UserTable'
 import SearchBar from './components/SearchBar'
+import ProjectTable from './components/UserTable'
 
 const Projects = () => {
-  const [project, setProject] = useState<string>('')
+  const [keyword, setKeyword] = useState<string>('')
 
-  const onSearch = ({ project }: { project: string }) => {
-    setProject(project)
+  const onSearch = ({ keyword }: { keyword: string }) => {
+    setKeyword(keyword)
   }
 
   return (
     <div className="page">
       <PageHeader title="Users" ghost={false}>
         <SearchBar onSearch={onSearch} />
-        <ProjectTable project={project} />
+        <ProjectTable keyword={keyword} />
       </PageHeader>
     </div>
   )

@@ -2,6 +2,12 @@ export interface Project {
   name: string
 }
 
+export interface ResponseType {
+  data: any
+  status: string
+  message: string
+}
+
 export interface User {
   id: string
   name: string
@@ -175,6 +181,13 @@ export interface LoginModel {
 export interface SignupModel {
   email: string
   password: string
+}
+
+export interface ForgotPasswordModel {
+  username: string
+  password: string
+  confirmPassword: string
+  captcha: string
 }
 
 export interface UserListModel {

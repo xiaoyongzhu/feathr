@@ -1,5 +1,8 @@
+import qs from 'querystring'
+
 import { InteractionRequiredAuthError, PublicClientApplication } from '@azure/msal-browser'
 import Axios from 'axios'
+import Cookies from 'js-cookie'
 
 import {
   DataSource,
@@ -8,17 +11,50 @@ import {
   Role,
   UserRole,
   NewFeature,
-  NewDatasource, LoginModel, SignupModel
+  NewDatasource,
+  LoginModel,
+  ResponseType,
+  SignupModel,
+  ForgotPasswordModel
 } from '@/models/model'
 import { getMsalConfig } from '@/utils/utils'
 
 const msalInstance = getMsalConfig()
+
 const getApiBaseUrl = () => {
   let endpoint = process.env.REACT_APP_API_ENDPOINT
   if (!endpoint || endpoint === '') {
     endpoint = window.location.protocol + '//' + window.location.host
   }
   return endpoint + '/api/v1'
+}
+
+export const authAxios = async (msalInstance: PublicClientApplication) => {
+  const token = await getIdToken(msalInstance)
+  const axios = Axios.create({
+    headers: {
+      // Authorization: 'Bearer ' + token,
+      'X-Token': token,
+      'Content-Type': 'application/json'
+    },
+    baseURL: getApiBaseUrl()
+  })
+
+  axios.interceptors.response.use(
+    (response) => {
+      return response
+    },
+    (error) => {
+      if (error.response?.status === 403) {
+        const detail = error.response.data.detail
+        window.location.href = '/responseErrors/403/' + detail
+      } else {
+        return Promise.reject(error.response.data)
+      }
+      //TODO: handle other response errors
+    }
+  )
+  return axios
 }
 
 export const fetchDataSources = async (project: string) => {
@@ -178,6 +214,10 @@ export const deleteUserRole = async (userrole: UserRole) => {
 }
 
 export const getIdToken = async (msalInstance: PublicClientApplication): Promise<string> => {
+  const token = Cookies.get('token')
+  if (token) {
+    return token
+  }
   const activeAccount = msalInstance.getActiveAccount() // This will only return a non-null value if you have logic somewhere else that calls the setActiveAccount API
   const accounts = msalInstance.getAllAccounts()
   const request = {
@@ -204,33 +244,6 @@ export const getIdToken = async (msalInstance: PublicClientApplication): Promise
     })
 
   return idToken
-}
-
-export const authAxios = async (msalInstance: PublicClientApplication) => {
-  const token = await getIdToken(msalInstance)
-  const axios = Axios.create({
-    headers: {
-      Authorization: 'Bearer ' + token,
-      'Content-Type': 'application/json'
-    },
-    baseURL: getApiBaseUrl()
-  })
-
-  axios.interceptors.response.use(
-    (response) => {
-      return response
-    },
-    (error) => {
-      if (error.response?.status === 403) {
-        const detail = error.response.data.detail
-        window.location.href = '/responseErrors/403/' + detail
-      } else {
-        return Promise.reject(error.response.data)
-      }
-      //TODO: handle other response errors
-    }
-  )
-  return axios
 }
 
 export const deleteEntity = async (enity: string) => {
@@ -278,54 +291,55 @@ export const createSource = async (project: string, datasource: NewDatasource) =
 
 export const signup = async (data: SignupModel) => {
   const axios = await authAxios(msalInstance)
-  return axios
-    .post(`${getApiBaseUrl()}/signup`, data)
-    .then((response) => {
-      return response
-    })
+  return axios.post<ResponseType>(`${getApiBaseUrl()}/signup`, data).then((response) => {
+    return response
+  })
+}
+
+export const forgotPassword = async (data: ForgotPasswordModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios.post<ResponseType>(`${getApiBaseUrl()}/signup`, data).then((response) => {
+    return response
+  })
 }
 
 export const login = async (data: LoginModel) => {
   const axios = await authAxios(msalInstance)
-  return axios
-    .post(`${getApiBaseUrl()}/login`, data)
-    .then((response) => {
-      return response
-    })
+  return axios.post(`${getApiBaseUrl()}/login`, data).then((response) => {
+    return response
+  })
 }
 
-export const fetchUsers = async (organizationId: string, keyword: string) => {
+export const fetchUsers = async (params: { keyword?: string }) => {
+  const organizationId = localStorage.getItem('temp_organization_id')
   const axios = await authAxios(msalInstance)
   return axios
-    .get<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/users`, {
+    .get<ResponseType>(`${getApiBaseUrl()}/organizations/${organizationId}/users`, {
       headers: {},
-      params: { keyword: keyword }
-    })
-    .then((response) => {
-      console.log(response.data)
-      return response.data
-    })
-}
-
-export const inviteUser = async (organizationId: string, email: string, role: string) => {
-  const axios = await authAxios(msalInstance)
-  // todo: need add x_token
-  return axios
-    .delete<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/invite?email=${email}&role=${role}`, {
-      headers: {'X-Token':'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiN2Q0MGUxYS01ZGY4LTQzMjEtOGRmNy01NjVmYjdlNGFkYjIiLCJleHAiOjE2NzY1MzcyNjksIm5hbWUiOiJvcmdfZmVhdGhyNkAxNjMuY29tIiwib3JnYW5pemF0aW9ucyI6W3sib3JnYW5pemF0aW9uX2lkIjoiYTFjY2YxMTItMzM2Ny00YzEzLThjMzgtYjRhODU1NTQ5N2MyIiwib3JnYW5pemF0aW9uX25hbWUiOiJvcmdfZmVhdGhyNiIsInJvbGUiOiJNQU5BR0VSIn1dfQ.sO_M5awd6j0j8siad8eh1kBLY73HXcPeZ7A3B2L34dE'}
+      params
     })
     .then((response) => {
       return response.data
     })
 }
 
-export const removeUser = async (organizationId: string, userId: string) => {
+export const inviteUser = async (params: { email: string; role: string }) => {
+  const organizationId = localStorage.getItem('temp_organization_id')
   const axios = await authAxios(msalInstance)
-  // todo: need add x_token
   return axios
-    .delete<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/users/${userId}`, {
-      headers: {'X-Token':'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiN2Q0MGUxYS01ZGY4LTQzMjEtOGRmNy01NjVmYjdlNGFkYjIiLCJleHAiOjE2NzY1MzcyNjksIm5hbWUiOiJvcmdfZmVhdGhyNkAxNjMuY29tIiwib3JnYW5pemF0aW9ucyI6W3sib3JnYW5pemF0aW9uX2lkIjoiYTFjY2YxMTItMzM2Ny00YzEzLThjMzgtYjRhODU1NTQ5N2MyIiwib3JnYW5pemF0aW9uX25hbWUiOiJvcmdfZmVhdGhyNiIsInJvbGUiOiJNQU5BR0VSIn1dfQ.sO_M5awd6j0j8siad8eh1kBLY73HXcPeZ7A3B2L34dE'}
+    .post<ResponseType>(
+      `${getApiBaseUrl()}/organizations/${organizationId}/invite?${qs.stringify(params)}`
+    )
+    .then((response) => {
+      return response.data
     })
+}
+
+export const removeUser = async (userId: string) => {
+  const organizationId = localStorage.getItem('temp_organization_id')
+  const axios = await authAxios(msalInstance)
+  return axios
+    .delete<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/users/${userId}`, {})
     .then((response) => {
       return response.data
     })

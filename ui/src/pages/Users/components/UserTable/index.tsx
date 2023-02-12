@@ -5,18 +5,17 @@ import { Button, Space, notification, Popconfirm, message } from 'antd'
 import { useQuery } from 'react-query'
 import { useNavigate } from 'react-router-dom'
 
-import {fetchProjects, deleteEntity, fetchUsers, removeUser} from '@/api'
+import { fetchProjects, deleteEntity, fetchUsers, removeUser } from '@/api'
 import ResizeTable, { ResizeColumnType } from '@/components/ResizeTable'
 import { Project, User } from '@/models/model'
 
 import ChangeUser from '../InviteUser'
 
 export interface ProjectTableProps {
-  project?: string
+  keyword?: string
 }
 const ProjectTable = (props: ProjectTableProps, ref: any) => {
-  const temp_organization_id = 'a1ccf112-3367-4c13-8c38-b4a8555497c2'
-  const { project } = props
+  const { keyword } = props
 
   const [open, setOpen] = useState<boolean>(false)
 
@@ -92,24 +91,13 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
     data: tableData,
     refetch
   } = useQuery<User[]>(
-    ['Projects', project],
+    ['dataSources', keyword],
     async () => {
-      // todo: keyword, and need parse result, content in the data
-      const result = await fetchUsers(temp_organization_id, '')
-      return []
-      // return result.reduce((list, item: string) => {
-      //   const text = project?.trim().toLocaleLowerCase()
-      //   if (!text || item.includes(text)) {
-      //     list.push({
-      //       name: item,
-      //       id: '',
-      //       email: '',
-      //       phone: '',
-      //       createTime: ''
-      //     })
-      //   }
-      //   return list
-      // }, [] as User[])
+      const params = {
+        keyword
+      }
+      const result = await fetchUsers(params)
+      return result.data
     },
     {
       retry: false,
@@ -119,7 +107,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
 
   const onDelete = async (entity: string, resolve: (value?: unknown) => void) => {
     try {
-      await removeUser(temp_organization_id, entity)
+      await removeUser(entity)
       message.success('The user is deleted successfully.')
       refetch()
     } catch (e: any) {
