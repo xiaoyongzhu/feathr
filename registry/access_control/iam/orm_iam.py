@@ -138,6 +138,7 @@ class OrmIAM(IAM):
         # save organization
         new_organization = OrganizationEntity(id=uuid4(), name=add_organization.name, remark=add_organization.remark)
         session.add(new_organization)
+        new_organization_id = new_organization.id
 
         # save administrator and relationship
         new_user = UserEntity(id=uuid4(), email=add_organization.email,
@@ -148,7 +149,7 @@ class OrmIAM(IAM):
 
         session.commit()
         session.close()
-        return new_organization.id
+        return new_organization_id
 
     def delete_organization(self, organization_id: str, operator_id: str):
         """Logical deletion"""
