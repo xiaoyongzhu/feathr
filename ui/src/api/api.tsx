@@ -1,6 +1,7 @@
 import qs from 'querystring'
 
 import { InteractionRequiredAuthError, PublicClientApplication } from '@azure/msal-browser'
+import { message } from 'antd'
 import Axios from 'axios'
 import Cookies from 'js-cookie'
 
@@ -42,6 +43,10 @@ export const authAxios = async (msalInstance: PublicClientApplication) => {
 
   axios.interceptors.response.use(
     (response) => {
+      if (response?.data?.status !== 'SUCCESS') {
+        message.error(response.data.message)
+        return Promise.reject(response.data.message)
+      }
       return response
     },
     (error) => {
@@ -51,7 +56,6 @@ export const authAxios = async (msalInstance: PublicClientApplication) => {
       } else {
         return Promise.reject(error.response.data)
       }
-      //TODO: handle other response errors
     }
   )
   return axios

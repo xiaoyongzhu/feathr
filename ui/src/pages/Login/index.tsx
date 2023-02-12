@@ -16,26 +16,24 @@ const App: React.FC = () => {
     }
     login(values).then((response) => {
       let data = response.data
-      if (data.status !== 'SUCCESS') {
-        message.warning(response.data.message)
-        return
+      if (data.status === 'SUCCESS') {
+        data = data.data
+        if (data.organizations.length === 0) {
+          // todo: This user does not have any organizations, need redirect no organization page!
+          return
+        }
+        message.success('Login Success')
+        const token = data.token
+        Cookies.set('token', token, {
+          expires: 7
+        })
+        localStorage.setItem(
+          'temp_organization_id',
+          data?.organizations[0] ?? 'a1ccf112-3367-4c13-8c38-b4a8555497c2'
+        )
+        localStorage.setItem('user_name', values.email)
+        window.location.href = '/'
       }
-      data = data.data
-      if (data.organizations.length === 0) {
-        // todo: This user does not have any organizations, need redirect no organization page!
-        return
-      }
-      message.success('Login Success')
-      const token = data.token
-      Cookies.set('token', token, {
-        expires: 7
-      })
-      localStorage.setItem(
-        'temp_organization_id',
-        data?.organizations[0] ?? 'a1ccf112-3367-4c13-8c38-b4a8555497c2'
-      )
-      localStorage.setItem('user_name', values.email)
-      window.location.href = '/'
     })
   }
 

@@ -5,3 +5,5 @@ pyjwt
 pydantic
 requests
 rsa
+flask
+sqlalchemy
