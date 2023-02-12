@@ -8,7 +8,7 @@ from flask import Request
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
-from iam.orm_iam import ConflictError, EntityNotFoundError, LoginError, AccessDeniedError
+from iam.exceptions import LoginError, ConflictError, EntityNotFoundError, AccessDeniedError
 from rbac import config
 from api import router as api_router
 

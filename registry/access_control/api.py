@@ -2,7 +2,7 @@ import json
 from typing import Optional
 
 import jwt
-from fastapi import APIRouter, Depends, Response, Header
+from fastapi import APIRouter, Depends, Response, Header, Query
 from rbac import config
 from rbac.access import *
 from rbac.db_rbac import DbRBAC
@@ -10,6 +10,7 @@ from rbac.models import User
 
 from iam.orm_iam import OrmIAM, secret_key, ALGORITHM
 from iam.models import AddOrganization, RegisterUser, UserLogin
+from iam.models import UserRole
 iam = OrmIAM()
 
 router = APIRouter()
@@ -186,13 +187,18 @@ def add_organization(organization: AddOrganization):
 
 
 @router.post("/organizations/{organization_id}/invite", name="Invite a User")
-def invite_user(organization_id: str, email: str, role: str = 'USER', operator_id: str = Depends(get_current_user)):
+def invite_user(organization_id: str, email: str,
+                role: UserRole = Query(..., title='role',
+                                       enum=UserRole.__members__.values()),
+                operator_id: str = Depends(get_current_user)):
     return ResponseWrapper(iam.invite_user(organization_id, email, role, operator_id))
 
 
 @router.get("/organizations/{organization_id}/users", name="Get all users of organization")
-def add_organization(organization_id: str, keyword: str = None, page_size: int = 20, page_no: int = 1):
-    return ResponseWrapper(iam.get_users(organization_id, keyword, page_size, page_no))
+def add_organization(organization_id: str, keyword: str = None,
+                     page_size: int = 20, page_no: int = 1,
+                     operator_id: str = Depends(get_current_user)):
+    return ResponseWrapper(iam.get_users(organization_id, keyword, operator_id, page_size, page_no))
 
 
 @router.delete("/organizations/{organization_id}/users/{user_id}", name="Remove user from organization")
@@ -202,8 +208,8 @@ def delete_organization_user(organization_id: str, user_id: str, operator_id: st
 
 
 @router.delete("/organizations/{organization_id}", name="Delete a organization")
-def delete_organization(organization_id: str):
-    return iam.delete_organization(organization_id)
+def delete_organization(organization_id: str, operator_id: str = Depends(get_current_user)):
+    return ResponseWrapper(iam.delete_organization(organization_id, operator_id))
 
 
 def check(r):

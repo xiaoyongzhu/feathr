@@ -1,8 +1,10 @@
 """
 
 """
+import os
 import time
 from datetime import datetime, timedelta
+
 from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -13,33 +15,16 @@ import jwt
 from iam.interface import IAM
 from iam.models import RegisterUser, AddOrganization
 
+from iam.exceptions import LoginError, ConflictError, EntityNotFoundError, AccessDeniedError
+from iam.models import UserRole, UserStatus
+
 Base = declarative_base()
 
-database_uri = 'mssql+pymssql://wxl:wxlAliyunDbAdmin@123.57.204.250/feathr'
 secret_key = 'feathr123#@!'
 default_password = 'feathr123#@!'
 ALGORITHM = 'HS256'
 
-
-# define errors
-class ConflictError(Exception):
-    """Entities already exist"""
-    pass
-
-
-class EntityNotFoundError(Exception):
-    """Cannot find this Entity"""
-    pass
-
-
-class LoginError(Exception):
-    """Exception Occurring During User Login"""
-    pass
-
-
-class AccessDeniedError(Exception):
-    """Exception Occurring During User Cannot access"""
-    pass
+"""The ORM implementation of IAM function"""
 
 
 # define entities
@@ -83,9 +68,31 @@ OrganizationEntity.users = relationship("OrganizationUserRelation", back_populat
 UserEntity.organizations = relationship("OrganizationUserRelation", back_populates="user")
 
 
+def parse_conn_str(s: str) -> dict:
+    """
+    TODO: Not a sound and safe implementation, but useful enough in this case
+    as the connection string is provided by users themselves.
+    """
+    parts = dict([p.strip().split("=", 1)
+                  for p in s.split(";") if len(p.strip()) > 0])
+    server = parts["Server"].split(":")[1].split(",")[0]
+    return {
+        "host": server,
+        "database": parts["Initial Catalog"],
+        "user": parts["User ID"],
+        "password": parts["Password"],
+        # "charset": "utf-8",   ## For unknown reason this causes connection failure
+    }
+
+
 class OrmIAM(IAM):
     def __init__(self):
-        self.engine = create_engine(database_uri)
+        conn_str = os.environ["RBAC_CONNECTION_STR"]
+        if "Server=" not in conn_str:
+            raise RuntimeError("`RBAC_CONNECTION_STR` is not in ADO connection string format")
+        params = parse_conn_str(conn_str)
+        self.engine = create_engine(
+            f'mssql+pymssql://{params["user"]}:{params["password"]}@{params["host"]}/{params["database"]}')
         self.Session = sessionmaker(bind=self.engine)
 
     def create_tables(self):
@@ -111,18 +118,18 @@ class OrmIAM(IAM):
                               password=self.__digest_password(default_password))
         session.add(new_user)
         session.add(OrganizationUserRelation(id=uuid4(), organization_id=new_organization.id, user_id=new_user.id,
-                                             role='ADMINISTRATOR'))
+                                             role=UserRole.ADMIN.value))
 
         session.commit()
         session.close()
         return new_organization.id
 
-    def delete_organization(self, id: str):
+    def delete_organization(self, organization_id: str, operator_id: str):
         """Logical deletion"""
         session = self.Session()
-        organization = session.query(OrganizationEntity).get(id)
-        if organization is None:
-            return 0
+        self.__check_organization_access(session, organization_id, operator_id)
+
+        organization = session.query(OrganizationEntity).get(organization_id)
         organization.status = 'DELETED'
         session.commit()
         session.close()
@@ -149,7 +156,7 @@ class OrmIAM(IAM):
         if user is None:
             raise LoginError('Incorrect username or password.')
 
-        if user.status != 'ACTIVE':
+        if user.status != UserStatus.ACTIVE.value:
             raise LoginError('User is not available.')
 
         # Check password
@@ -175,15 +182,12 @@ class OrmIAM(IAM):
         session.close()
         return response_data
 
-    def invite_user(self, organization_id: str, email: str, role: str, operator_id: str):
+    def invite_user(self, organization_id: str, email: str, role: UserRole, operator_id: str):
         session = self.Session()
 
         # Check whether have access
-        relation = session.query(OrganizationUserRelation) \
-            .filter(OrganizationUserRelation.organization_id == organization_id,
-                    OrganizationUserRelation.user_id == operator_id).first()
-        if relation is None or relation.role != 'MANAGER':
-            raise AccessDeniedError('Access Denied!')
+        self.__check_organization_access(session, organization_id, operator_id)
+
         user = self.__get_existing_user(session, email)
         # Check if this user is already belonging to this organization
         organization_users = session.query(OrganizationUserRelation) \
@@ -192,7 +196,7 @@ class OrmIAM(IAM):
             return 0
 
         session.add(OrganizationUserRelation(id=uuid4(), organization_id=organization_id,
-                                             user_id=user.id, role=role))
+                                             user_id=user.id, role=role.value))
         session.commit()
         session.close()
         return 1
@@ -202,11 +206,7 @@ class OrmIAM(IAM):
         session = self.Session()
 
         # Check whether have access
-        relation = session.query(OrganizationUserRelation) \
-            .filter(OrganizationUserRelation.organization_id == organization_id,
-                    OrganizationUserRelation.user_id == operator_id).first()
-        if relation is None or relation.role != 'MANAGER':
-            raise AccessDeniedError('Access Denied!')
+        self.__check_organization_access(organization_id, operator_id)
 
         session.query(OrganizationUserRelation) \
             .filter(OrganizationUserRelation.organization_id == organization_id,
@@ -216,9 +216,12 @@ class OrmIAM(IAM):
         session.close()
         return
 
-    def get_users(self, organization_id: str, keyword: str, page_size: int = 20, page_no: int = 1):
+    def get_users(self, organization_id: str, keyword: str, operator_id: str, page_size: int, page_no: int):
         """User search with support for keyword and pagination"""
         session = self.Session()
+
+        self.__check_organization_access(organization_id, operator_id)
+
         users = []
         filters = [OrganizationUserRelation.organization_id == organization_id]
         if keyword is not None and keyword != '':
@@ -243,8 +246,19 @@ class OrmIAM(IAM):
         session.close()
         return exist_user
 
+    def __check_organization_access(self, session, organization_id: str, operator_id: str):
+        """Check if the user has the authority to operate on this organization,
+        and if the user or organization does not exist, it will also return Access Denied """
+
+        relation = session.query(OrganizationUserRelation) \
+            .filter(OrganizationUserRelation.organization_id == organization_id,
+                    OrganizationUserRelation.user_id == operator_id).first()
+        if relation is None or relation.role != UserRole.ADMIN.value:
+            raise AccessDeniedError('Access Denied!')
+
     def __check_email_exists(self, session, email: str):
         """ if email already exists, will raise a error """
+
         user = session.query(UserEntity).filter_by(email=email).first()
         if user is not None:
             raise ConflictError('User(' + email + ') already exists!')
@@ -254,13 +268,6 @@ class OrmIAM(IAM):
         if user is None:
             raise EntityNotFoundError('User(' + email + ') not found!')
         return user
-
-    def __check_organization_not_exists(self, organization_id: str):
-        session = self.Session()
-        organization = session.query(OrganizationEntity).filter_by(id=organization_id).first()
-        session.close()
-        if organization is None:
-            raise EntityNotFoundError('Organization(' + organization_id + ') not found!')
 
     def __digest_password(self, password: str):
         return hashlib.sha256(password.encode('utf-8')).hexdigest()

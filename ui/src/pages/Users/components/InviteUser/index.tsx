@@ -21,6 +21,7 @@ const InviteUser = (props: InviteUserProps, ref: any) => {
   }
 
   const onFinish = () => {
+    // todo: need add api logic
     console.log('onFinish')
     setOpen(false)
   }
