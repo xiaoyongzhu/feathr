@@ -1,9 +1,9 @@
-"""
-
-"""
 import os
+import string
 import time
-from datetime import datetime, timedelta
+import datetime
+import random
+from email.mime.text import MIMEText
 
 from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship
@@ -11,12 +11,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from uuid import uuid4
 import hashlib
 import jwt
+import smtplib
 
 from iam.interface import IAM
 from iam.models import RegisterUser, AddOrganization
 
 from iam.exceptions import LoginError, ConflictError, EntityNotFoundError, AccessDeniedError
 from iam.models import UserRole, UserStatus
+
+from iam.models import CaptchaType
+from rbac import config
+
+from iam.models import CaptchaStatus
 
 Base = declarative_base()
 
@@ -35,8 +41,8 @@ class OrganizationEntity(Base):
     name = Column('name', String, nullable=False)
     remark = Column('remark', String, nullable=True)
     status = Column('status', String, default='ACTIVE')
-    create_time = Column('create_time', DateTime, default=datetime.utcnow)
-    update_time = Column('update_time', DateTime, default=datetime.utcnow)
+    create_time = Column('create_time', DateTime, default=datetime.datetime.utcnow)
+    update_time = Column('update_time', DateTime, default=datetime.datetime.utcnow)
 
 
 class UserEntity(Base):
@@ -46,8 +52,19 @@ class UserEntity(Base):
     email = Column('email', String, nullable=False)
     password = Column('password', String, nullable=False)
     status = Column('status', String, default='ACTIVE')
-    create_time = Column('create_time', DateTime, default=datetime.utcnow)
-    update_time = Column('update_time', DateTime, default=datetime.utcnow)
+    create_time = Column('create_time', DateTime, default=datetime.datetime.utcnow)
+    update_time = Column('update_time', DateTime, default=datetime.datetime.utcnow)
+
+
+class CaptchaEntity(Base):
+    __tablename__ = "captcha"
+
+    id = Column('id', String, primary_key=True)
+    receiver = Column('receiver', String, nullable=False)
+    type = Column('type', String, nullable=False)
+    code = Column('code', String, nullable=False)
+    status = Column('status', String, nullable=False)
+    create_time = Column('create_time', DateTime, default=datetime.datetime.utcnow)
 
 
 class OrganizationUserRelation(Base):
@@ -58,7 +75,7 @@ class OrganizationUserRelation(Base):
     organization_id = Column(String, ForeignKey('organizations.id'), nullable=False)
     user_id = Column(String, ForeignKey('users.id'), nullable=False)
     role = Column('role', String, nullable=False)
-    create_time = Column('create_time', DateTime, default=datetime.utcnow)
+    create_time = Column('create_time', DateTime, default=datetime.datetime.utcnow)
 
     organization = relationship("OrganizationEntity", back_populates="users")
     user = relationship("UserEntity", back_populates="organizations")
@@ -94,6 +111,15 @@ class OrmIAM(IAM):
         self.engine = create_engine(
             f'mssql+pymssql://{params["user"]}:{params["password"]}@{params["host"]}/{params["database"]}')
         self.Session = sessionmaker(bind=self.engine)
+
+        # init email server
+        smtp_obj = smtplib.SMTP()
+        # 连接到服务器
+        smtp_obj.connect(config.EMAIL_SENDER_HOST, config.EMAIL_SENDER_PORT)
+        # 登录到服务器
+        smtp_obj.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
+        self.smtp_obj = smtp_obj
+        self.smtp_sender = config.EMAIL_SENDER_ADDRESS
 
     def create_tables(self):
         Base.metadata.create_all(self.engine)
@@ -135,12 +161,44 @@ class OrmIAM(IAM):
         session.close()
         return 1
 
+    def send_captcha(self, email: str, type: CaptchaType):
+        session = self.Session()
+
+        # If it is registration, then an email that has not been registered
+        if type == CaptchaType.REGISTER:
+            # check if user already exist
+            self.__check_email_exists(session, email)
+
+        # It is necessary to wait until the verification code expires
+        latest_entity = session.query(CaptchaEntity) \
+            .filter(CaptchaEntity.receiver == email,
+                    CaptchaEntity.type == type.value,
+                    CaptchaEntity.status == CaptchaStatus.SEND.value) \
+            .order_by(CaptchaEntity.create_time.desc()).first()
+        if latest_entity is not None:
+            if (datetime.datetime.utcnow() - latest_entity.create_time) < datetime.timedelta(minutes=1):
+                raise AccessDeniedError("Need previous verification code expires")
+        code = self.__generate_code()
+
+        new_captcha = CaptchaEntity(id=uuid4(), receiver=email, type=type.value,
+                                    code=code, status=CaptchaStatus.SEND.value)
+
+        # Send email
+        self.smtp_obj.sendmail(
+            self.smtp_sender, email,
+            MIMEText(f'Type: {type.value}, Verification Code: {code}', 'plain', 'utf-8').as_string())
+
+        session.add(new_captcha)
+        session.commit()
+        session.close()
+
     def signup(self, register_user: RegisterUser):
         session = self.Session()
         # check if user already exist
-        user = session.query(UserEntity).filter_by(email=register_user.email).first()
-        if user is not None:
-            raise ConflictError('email already exists!')
+        self.__check_email_exists(session, register_user.email)
+
+        # Check if the captcha is right
+        self.__verify_code(session, register_user.email, CaptchaType.REGISTER, register_user.captcha)
 
         new_user = UserEntity(id=uuid4(), email=register_user.email,
                               password=self.__digest_password(register_user.password))
@@ -181,6 +239,14 @@ class OrmIAM(IAM):
         }
         session.close()
         return response_data
+
+    def reset_password(self, email: str, new_password: str, captcha: str):
+        session = self.Session()
+        self.__verify_code(session, email, CaptchaType.UPDATE_PASSWORD, captcha)
+        user = self.__get_existing_user(session, email)
+        user.password = self.__digest_password(new_password)
+        session.commit()
+        session.close()
 
     def invite_user(self, organization_id: str, email: str, role: UserRole, operator_id: str):
         session = self.Session()
@@ -246,6 +312,18 @@ class OrmIAM(IAM):
         session.close()
         return exist_user
 
+    def __verify_code(self, session, receiver: str, type: CaptchaType, captcha: str):
+        """Check whether the captcha is correct"""
+        latest_captcha = session.query(CaptchaEntity) \
+            .filter(CaptchaEntity.receiver == receiver,
+                    CaptchaEntity.type == type.value,
+                    CaptchaEntity.status == CaptchaStatus.SEND.value) \
+            .order_by(CaptchaEntity.create_time.desc()).first()
+        if latest_captcha is None or latest_captcha.code != captcha:
+            raise AccessDeniedError('Incorrect Captcha!')
+        else:
+            latest_captcha.status = CaptchaStatus.VERIFIED.value
+
     def __check_organization_access(self, session, organization_id: str, operator_id: str):
         """Check if the user has the authority to operate on this organization,
         and if the user or organization does not exist, it will also return Access Denied """
@@ -258,7 +336,6 @@ class OrmIAM(IAM):
 
     def __check_email_exists(self, session, email: str):
         """ if email already exists, will raise a error """
-
         user = session.query(UserEntity).filter_by(email=email).first()
         if user is not None:
             raise ConflictError('User(' + email + ') already exists!')
@@ -271,3 +348,7 @@ class OrmIAM(IAM):
 
     def __digest_password(self, password: str):
         return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+    def __generate_code(self, ):
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        return code

@@ -9,7 +9,7 @@ from rbac.db_rbac import DbRBAC
 from rbac.models import User
 
 from iam.orm_iam import OrmIAM, secret_key, ALGORITHM
-from iam.models import AddOrganization, RegisterUser, UserLogin
+from iam.models import AddOrganization, RegisterUser, UserLogin, CaptchaType, UserResetPassword
 from iam.models import UserRole
 iam = OrmIAM()
 
@@ -165,6 +165,12 @@ def delete_userrole(user: str, role: str, reason: str, access: UserAccess = Depe
 
 # Below are IAM management APIs
 
+@router.post("/captcha/send")
+def send_captcha(email: str, type: CaptchaType = Query(..., title='type',
+                                       enum=CaptchaType.__members__.values())):
+    iam.send_captcha(email, type)
+    return ResponseWrapper(True)
+
 
 @router.post("/signup", name="Register a new User")
 def register_user(user: RegisterUser):
@@ -174,6 +180,14 @@ def register_user(user: RegisterUser):
 @router.post("/login", name="User login")
 def register_user(user_login: UserLogin):
     return ResponseWrapper(iam.login(user_login.email, user_login.password))
+
+
+@router.post("/reset-password", name="Reset Password")
+def reset_password(user_reset_password: UserResetPassword):
+    iam.reset_password(user_reset_password.email, user_reset_password.new_password,
+                       user_reset_password.captcha)
+    return ResponseWrapper(True)
+
 
 
 @router.post("/users/email/check", name="Check Email if exists")

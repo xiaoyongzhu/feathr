@@ -1,3 +1,5 @@
+from smtplib import SMTPRecipientsRefused
+
 import uvicorn
 import os
 import traceback
@@ -42,7 +44,6 @@ app = get_application()
 
 def exc_to_content(e: Exception) -> Dict:
     """ In scenarios where the user parameter cannot pass, the error will be displayed on the page """
-    print(e)
     content = {"status": "FAILED", "message": str(e)}
     if os.environ.get("REGISTRY_DEBUGGING"):
         content["traceback"] = "".join(traceback.TracebackException.from_exception(e).format())
@@ -93,6 +94,14 @@ async def conflict_error_handler(_, exc: LoginError):
 
 @app.exception_handler(AccessDeniedError)
 async def conflict_error_handler(_, exc: AccessDeniedError):
+    return JSONResponse(
+        status_code=200,
+        content=exc_to_content(exc),
+    )
+
+
+@app.exception_handler(SMTPRecipientsRefused)
+async def conflict_error_handler(_, exc: SMTPRecipientsRefused):
     return JSONResponse(
         status_code=200,
         content=exc_to_content(exc),

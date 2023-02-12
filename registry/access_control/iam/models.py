@@ -23,6 +23,12 @@ class UserLogin(BaseModel):
     password: constr(min_length=5)
 
 
+class UserResetPassword(BaseModel):
+    email: constr(min_length=5)
+    new_password: constr(min_length=5)
+    captcha: constr(min_length=4)
+
+
 # define enums
 class UserRole(Enum):
     ADMIN = 'ADMIN'
@@ -31,3 +37,13 @@ class UserRole(Enum):
 
 class UserStatus(Enum):
     ACTIVE = 'ACTIVE'
+
+
+class CaptchaType(Enum):
+    REGISTER = 'REGISTER'
+    UPDATE_PASSWORD = 'UPDATE_PASSWORD'
+
+
+class CaptchaStatus(Enum):
+    SEND = 'SEND'
+    VERIFIED = 'VERIFIED'

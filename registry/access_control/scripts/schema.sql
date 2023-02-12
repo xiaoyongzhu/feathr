@@ -12,6 +12,18 @@ create table userroles
     delete_time datetime,
 );
 
+create table captcha
+(
+	id varchar(50) not null
+		constraint captcha_pk
+			primary key nonclustered,
+	receiver varchar(64) not null,
+	type varchar(32) not null,
+	code varchar(10) not null,
+	status varchar(32) not null,
+	create_time datetime not null
+)
+
 CREATE TABLE users (
   id VARCHAR(50) NOT NULL,
   email VARCHAR(50) NOT NULL,

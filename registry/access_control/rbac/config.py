@@ -21,3 +21,9 @@ RBAC_CONNECTION_STR: str = _get_config("RBAC_CONNECTION_STR")
 
 # Downstream API Endpoint
 RBAC_REGISTRY_URL: str = _get_config("RBAC_REGISTRY_URL")
+
+# Email
+EMAIL_SENDER_HOST: str = _get_config("EMAIL_SENDER_HOST")
+EMAIL_SENDER_PORT: str = _get_config("EMAIL_SENDER_PORT")
+EMAIL_SENDER_ADDRESS: str = _get_config("EMAIL_SENDER_ADDRESS")
+EMAIL_SENDER_PASSWORD: str = _get_config("EMAIL_SENDER_PASSWORD")
