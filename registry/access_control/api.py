@@ -177,6 +177,11 @@ def register_user(user: RegisterUser):
     return ResponseWrapper(iam.signup(user))
 
 
+@router.post("/okta/login", name="Akta login")
+def register_user(access_token: str):
+    return ResponseWrapper(iam.akta_login(access_token))
+
+
 @router.post("/login", name="User login")
 def register_user(user_login: UserLogin):
     return ResponseWrapper(iam.login(user_login.email, user_login.password))

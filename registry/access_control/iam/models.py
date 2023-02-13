@@ -47,3 +47,7 @@ class CaptchaType(Enum):
 class CaptchaStatus(Enum):
     SEND = 'SEND'
     VERIFIED = 'VERIFIED'
+
+
+class SsoUserPlatform(Enum):
+    OKTA = 'OKTA'

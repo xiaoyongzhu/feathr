@@ -28,8 +28,8 @@ const App: React.FC = () => {
           expires: 7
         })
         localStorage.setItem(
-          'temp_organization_id',
-          data?.organizations[0] ?? 'a1ccf112-3367-4c13-8c38-b4a8555497c2'
+          'organization_id',
+          data.organizations[0].organization_id
         )
         localStorage.setItem('user_name', values.email)
         window.location.href = '/'

@@ -27,13 +27,28 @@ create table captcha
 CREATE TABLE users (
   id VARCHAR(50) NOT NULL,
   email VARCHAR(50) NOT NULL,
-  password VARCHAR(64) NOT NULL,
+  password VARCHAR(64) NULL,
   phone VARCHAR(50) NULL,
   status VARCHAR(50) NULL,
   create_time DATETIME NOT NULL,
   update_time DATETIME NOT NULL,
   PRIMARY KEY (id),
   CONSTRAINT email_UNIQUE UNIQUE (email ASC));
+
+create table sso_users
+(
+	id varchar(50) not null
+		constraint sso_user_pk
+			primary key nonclustered,
+	sso_user_id varchar(128) not null,
+	sso_email varchar(128) null,
+	user_id varchar(50) not null,
+	platform varchar(50) not null,
+	access_token varchar(1024),
+	source_str varchar(1024),
+	create_time datetime not null,
+	update_time datetime not null
+)
 
 CREATE TABLE organizations (
   id VARCHAR(50) NOT NULL,

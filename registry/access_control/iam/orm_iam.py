@@ -1,3 +1,4 @@
+import json
 import os
 import string
 import time
@@ -23,6 +24,10 @@ from iam.models import CaptchaType
 from rbac import config
 
 from iam.models import CaptchaStatus
+from iam import okta
+
+from iam.models import SsoUserPlatform
+from iam.okta import OkataUserInfo
 
 Base = declarative_base()
 
@@ -50,8 +55,22 @@ class UserEntity(Base):
 
     id = Column('id', String, primary_key=True)
     email = Column('email', String, nullable=False)
-    password = Column('password', String, nullable=False)
+    password = Column('password', String)
     status = Column('status', String, default='ACTIVE')
+    create_time = Column('create_time', DateTime, default=datetime.datetime.utcnow)
+    update_time = Column('update_time', DateTime, default=datetime.datetime.utcnow)
+
+
+class SsoUserEntity(Base):
+    __tablename__ = "sso_users"
+
+    id = Column('id', String, primary_key=True)
+    sso_user_id = Column('sso_user_id', String, nullable=False)
+    sso_email = Column('sso_email', String, nullable=False)
+    user_id = Column('user_id', String, nullable=False)
+    platform = Column('platform', String, nullable=False)
+    access_token = Column('access_token', String, nullable=False)
+    source_str = Column('source_str', String, nullable=False)
     create_time = Column('create_time', DateTime, default=datetime.datetime.utcnow)
     update_time = Column('update_time', DateTime, default=datetime.datetime.utcnow)
 
@@ -209,6 +228,35 @@ class OrmIAM(IAM):
         session.close()
         return user_id
 
+    def akta_login(self, access_token):
+        """If already have a Feathr user, return successful login. If not, generate a new user"""
+        session = self.Session()
+        okta_user_info_str = okta.get_user_info(access_token)
+        okta_user_info = OkataUserInfo(**okta_user_info_str)
+        okta_user = session.query(SsoUserEntity) \
+            .filter(SsoUserEntity.sso_user_id == okta_user_info.sub,
+                    SsoUserEntity.platform == SsoUserPlatform.OKTA.value) \
+            .order_by(SsoUserEntity.create_time.desc()).first()
+        if okta_user is None:
+            # Save Feathr user
+            user = UserEntity(id=uuid4(), email=okta_user_info.email)
+            session.add(user)
+            okta_user = SsoUserEntity(id=uuid4(), user_id=user.id, sso_user_id=okta_user_info.sub,
+                                      platform=SsoUserPlatform.OKTA.value, sso_email=okta_user_info.email,
+                                      access_token=access_token, source_str=json.dumps(okta_user_info_str))
+            session.add(okta_user)
+        else:
+            okta_user.access_token = access_token
+            okta_user.sso_email = okta_user_info.email
+            okta_user.update_time = datetime.datetime.utcnow()
+
+        # Search user and return
+        select_user = session.query(UserEntity).get(okta_user.user_id)
+        response_data = self.__login_result(session, select_user)
+        session.commit()
+        session.close()
+        return response_data
+
     def login(self, email: str, password: str):
         session = self.Session()
         user = session.query(UserEntity).filter_by(email=email).first()
@@ -222,22 +270,7 @@ class OrmIAM(IAM):
         if user.password != self.__digest_password(password):
             raise LoginError('Incorrect username or password.')
 
-        # Get organizations, retrieving the result by joining the organization table and the organization_user table
-        # Now, a user only returns one organization
-        result = session.query(OrganizationUserRelation, OrganizationEntity) \
-            .join(OrganizationEntity).filter(OrganizationUserRelation.user_id == user.id).all()
-        organizations = []
-        for organizationUserRelation, organizationEntity in result:
-            organizations.append({'organization_id': organizationUserRelation.organization_id,
-                                  'organization_name': organizationEntity.name,
-                                  'role': organizationUserRelation.role})
-        response_data = {
-            'token': jwt.encode({
-                'sub': user.id,
-                'iat': int(time.time()),
-                'name': email
-            }, secret_key, algorithm=ALGORITHM)
-        }
+        response_data = self.__login_result(session, user)
         session.close()
         return response_data
 
@@ -252,10 +285,10 @@ class OrmIAM(IAM):
     def invite_user(self, organization_id: str, email: str, role: UserRole, operator_id: str):
         session = self.Session()
 
+        user = self.__get_existing_user(session, email)
+
         # Check whether have access
         self.__check_organization_access(session, organization_id, operator_id)
-
-        user = self.__get_existing_user(session, email)
         # Check if this user is already belonging to this organization
         organization_users = session.query(OrganizationUserRelation) \
             .filter_by(organization_id=organization_id, user_id=user.id).first()
@@ -273,7 +306,7 @@ class OrmIAM(IAM):
         session = self.Session()
 
         # Check whether have access
-        self.__check_organization_access(organization_id, operator_id)
+        self.__check_organization_access(session, organization_id, operator_id)
 
         session.query(OrganizationUserRelation) \
             .filter(OrganizationUserRelation.organization_id == organization_id,
@@ -287,7 +320,7 @@ class OrmIAM(IAM):
         """User search with support for keyword and pagination"""
         session = self.Session()
 
-        self.__check_organization_access(organization_id, operator_id)
+        self.__check_organization_access(session, organization_id, operator_id)
 
         users = []
         filters = [OrganizationUserRelation.organization_id == organization_id]
@@ -312,6 +345,25 @@ class OrmIAM(IAM):
         exist_user = {'id': user.id, 'email': user.email}
         session.close()
         return exist_user
+
+    def __login_result(self, session, user: UserEntity):
+        """Get organizations, retrieving the result by joining the organization table and the organization_user table
+        Now, a user only returns one organization"""
+        result = session.query(OrganizationUserRelation, OrganizationEntity) \
+            .join(OrganizationEntity).filter(OrganizationUserRelation.user_id == user.id).all()
+        organizations = []
+        for organizationUserRelation, organizationEntity in result:
+            organizations.append({'organization_id': organizationUserRelation.organization_id,
+                                  'organization_name': organizationEntity.name,
+                                  'role': organizationUserRelation.role})
+        return {
+            'organizations': organizations,
+            'token': jwt.encode({
+                'sub': user.id,
+                'iat': int(time.time()),
+                'name': user.email
+            }, secret_key, algorithm=ALGORITHM)
+        }
 
     def __verify_code(self, session, receiver: str, type: CaptchaType, captcha: str):
         """Check whether the captcha is correct"""

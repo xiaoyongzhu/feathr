@@ -45,9 +45,8 @@ const InviteUser = (props: InviteUserProps, ref: any) => {
         </Item>
         <Item name="role" label="Role" rules={[{ required: true }]}>
           <Select allowClear placeholder="Select Role">
-            <Option value="admin">Admin</Option>
-            <Option value="user">User</Option>
-            <Option value="other">Other</Option>
+            <Option value="ADMIN">Admin</Option>
+            <Option value="USER">User</Option>
           </Select>
         </Item>
       </Form>

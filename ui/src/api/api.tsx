@@ -315,7 +315,7 @@ export const login = async (data: LoginModel) => {
 }
 
 export const fetchUsers = async (params: { keyword?: string }) => {
-  const organizationId = localStorage.getItem('temp_organization_id')
+  const organizationId = localStorage.getItem('organization_id')
   const axios = await authAxios(msalInstance)
   return axios
     .get<ResponseType>(`${getApiBaseUrl()}/organizations/${organizationId}/users`, {
@@ -328,7 +328,7 @@ export const fetchUsers = async (params: { keyword?: string }) => {
 }
 
 export const inviteUser = async (params: { email: string; role: string }) => {
-  const organizationId = localStorage.getItem('temp_organization_id')
+  const organizationId = localStorage.getItem('organization_id')
   const axios = await authAxios(msalInstance)
   return axios
     .post<ResponseType>(
@@ -340,7 +340,7 @@ export const inviteUser = async (params: { email: string; role: string }) => {
 }
 
 export const removeUser = async (userId: string) => {
-  const organizationId = localStorage.getItem('temp_organization_id')
+  const organizationId = localStorage.getItem('organization_id')
   const axios = await authAxios(msalInstance)
   return axios
     .delete<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/users/${userId}`, {})
