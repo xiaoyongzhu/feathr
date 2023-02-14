@@ -239,6 +239,7 @@ class OrmIAM(IAM):
             .order_by(SsoUserEntity.create_time.desc()).first()
         if okta_user is None:
             # Save Feathr user
+            self.__check_email_exists(session, okta_user_info.email)
             user = UserEntity(id=uuid4(), email=okta_user_info.email)
             session.add(user)
             okta_user = SsoUserEntity(id=uuid4(), user_id=user.id, sso_user_id=okta_user_info.sub,
