@@ -134,6 +134,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
     <>
       <ResizeTable
         key={'id'}
+        pagination={false}
         rowKey="name"
         loading={isLoading}
         columns={columns}
