@@ -12,6 +12,7 @@ import ForgotPassword from '@/pages/ForgotPassword'
 import Home from '@/pages/Home'
 import Jobs from '@/pages/Jobs'
 import Login from '@/pages/Login'
+import LoginOkta from '@/pages/LoginOkta'
 import Management from '@/pages/Management'
 import Monitoring from '@/pages/Monitoring'
 import NewFeature from '@/pages/NewFeature'
@@ -72,6 +73,7 @@ const App = () => {
                   <Route path="/role-management" element={<RoleManagement />} />
                   <Route path="/responseErrors/:status/:detail" element={<ResponseErrors />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/okta-login/callback" element={<LoginOkta />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/sign-up" element={<SignUp />} />
                 </Routes>

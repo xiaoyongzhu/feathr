@@ -1,11 +1,11 @@
 import React from 'react'
 
-import { LockOutlined, UserOutlined, AlipayOutlined } from '@ant-design/icons'
-import { Button, Checkbox, Form, Input, Row, Col, message } from 'antd'
+import {LockOutlined, UserOutlined, AlipayOutlined} from '@ant-design/icons'
+import {Button, Checkbox, Form, Input, Row, Col, message} from 'antd'
 import Cookies from 'js-cookie'
 
-import { login } from '@/api'
-import { LoginModel } from '@/models/model'
+import {login} from '@/api'
+import {LoginModel} from '@/models/model'
 
 import styles from './index.module.less'
 
@@ -37,6 +37,29 @@ const App: React.FC = () => {
     })
   }
 
+  const handleOktaLogin = () => {
+    let oktaAuthorizeUrl = process.env.REACT_APP_OKTA_AUTHORIZE_URL
+    if (!oktaAuthorizeUrl) {
+      throw Error('REACT_APP_OKTA_AUTHORIZE_URL cannot be none')
+    }
+
+    let oktaClientId = process.env.REACT_APP_OKTA_CLIENT_ID
+    if (!oktaClientId) {
+      throw Error('REACT_APP_OKTA_CLIENT_ID cannot be none')
+    }
+
+    let oktaCallbackUri = process.env.REACT_APP_OKTA_CALLBACK_URI
+    if (!oktaCallbackUri) {
+      throw Error('REACT_APP_OKTA_CALLBACK_URI cannot be none')
+    }
+    let authAuthorizeUrl = oktaAuthorizeUrl
+    authAuthorizeUrl += '?response_type=code'
+    authAuthorizeUrl += '&client_id=' + oktaClientId
+    authAuthorizeUrl += '&redirect_uri=' + encodeURIComponent(oktaCallbackUri)
+    authAuthorizeUrl += '&scope=openid+profile+email&state=feathr'
+    window.location.href = authAuthorizeUrl
+  }
+
   return (
     <div className={styles.loginBox}>
       <div className={styles.loginContentBox}>
@@ -44,19 +67,19 @@ const App: React.FC = () => {
         <Form
           name="normal_login"
           className="login-form"
-          initialValues={{ remember: true }}
+          initialValues={{remember: true}}
           size={'large'}
           onFinish={onFinish}
         >
-          <Form.Item name="email" rules={[{ required: true, message: 'Please input your Email!' }]}>
-            <Input prefix={<UserOutlined className="site-form-item-icon" />} placeholder="Email" />
+          <Form.Item name="email" rules={[{required: true, message: 'Please input your Email!'}]}>
+            <Input prefix={<UserOutlined className="site-form-item-icon"/>} placeholder="Email"/>
           </Form.Item>
           <Form.Item
             name="password"
-            rules={[{ required: true, message: 'Please input your Password!' }]}
+            rules={[{required: true, message: 'Please input your Password!'}]}
           >
             <Input
-              prefix={<LockOutlined className="site-form-item-icon" />}
+              prefix={<LockOutlined className="site-form-item-icon"/>}
               type="password"
               placeholder="Password"
             />
@@ -80,10 +103,11 @@ const App: React.FC = () => {
               Others
               <Button
                 type="primary"
-                style={{ marginLeft: 10 }}
+                style={{marginLeft: 10}}
                 shape="circle"
                 size="small"
-                icon={<AlipayOutlined />}
+                icon={<AlipayOutlined/>}
+                onClick={handleOktaLogin}
               ></Button>
             </div>
             <a href="/sign-up">Sign Up</a>

@@ -9,8 +9,9 @@ from rbac.db_rbac import DbRBAC
 from rbac.models import User
 
 from iam.orm_iam import OrmIAM, secret_key, ALGORITHM
-from iam.models import AddOrganization, RegisterUser, UserLogin, CaptchaType, UserResetPassword
+from iam.models import AddOrganization, RegisterUser, UserLogin, CaptchaType, UserResetPassword, OktaLogin
 from iam.models import UserRole
+
 iam = OrmIAM()
 
 router = APIRouter()
@@ -61,21 +62,25 @@ def get_dependent_entities(entity: str, access: UserAccess = Depends(project_rea
 
 
 @router.get("/projects/{project}/datasources", name="Get data sources of my project [Read Access Required]")
-def get_project_datasources(project: str, response: Response, access: UserAccess = Depends(project_read_access)) -> list:
+def get_project_datasources(project: str, response: Response,
+                            access: UserAccess = Depends(project_read_access)) -> list:
     response.status_code, res = check(requests.get(url=f"{registry_url}/projects/{project}/datasources",
                                                    headers=get_api_header(access.user_name)))
     return res
 
 
-@router.get("/projects/{project}/datasources/{datasource}", name="Get a single data source by datasource Id [Read Access Required]")
-def get_project_datasource(project: str, datasource: str, response: Response, requestor: UserAccess = Depends(project_read_access)) -> list:
+@router.get("/projects/{project}/datasources/{datasource}",
+            name="Get a single data source by datasource Id [Read Access Required]")
+def get_project_datasource(project: str, datasource: str, response: Response,
+                           requestor: UserAccess = Depends(project_read_access)) -> list:
     response.status_code, res = check(requests.get(url=f"{registry_url}/projects/{project}/datasources/{datasource}",
                                                    headers=get_api_header(requestor.user_name)))
     return res
 
 
 @router.get("/projects/{project}/features", name="Get features under my project [Read Access Required]")
-def get_project_features(project: str, response: Response, keyword: Optional[str] = None, access: UserAccess = Depends(project_read_access)) -> list:
+def get_project_features(project: str, response: Response, keyword: Optional[str] = None,
+                         access: UserAccess = Depends(project_read_access)) -> list:
     response.status_code, res = check(requests.get(url=f"{registry_url}/projects/{project}/features",
                                                    headers=get_api_header(access.user_name)))
     return res
@@ -119,31 +124,42 @@ def new_project(definition: dict, response: Response, requestor: User = Depends(
 
 
 @router.post("/projects/{project}/datasources", name="Create new data source of my project [Write Access Required]")
-def new_project_datasource(project: str, definition: dict, response: Response, access: UserAccess = Depends(project_write_access)) -> dict:
-    response.status_code, res = check(requests.post(url=f"{registry_url}/projects/{project}/datasources", json=definition, headers=get_api_header(
-        access.user_name)))
+def new_project_datasource(project: str, definition: dict, response: Response,
+                           access: UserAccess = Depends(project_write_access)) -> dict:
+    response.status_code, res = check(
+        requests.post(url=f"{registry_url}/projects/{project}/datasources", json=definition, headers=get_api_header(
+            access.user_name)))
     return res
 
 
 @router.post("/projects/{project}/anchors", name="Create new anchors of my project [Write Access Required]")
-def new_project_anchor(project: str, definition: dict, response: Response, access: UserAccess = Depends(project_write_access)) -> dict:
-    response.status_code, res = check(requests.post(url=f"{registry_url}/projects/{project}/anchors", json=definition, headers=get_api_header(
-        access.user_name)))
+def new_project_anchor(project: str, definition: dict, response: Response,
+                       access: UserAccess = Depends(project_write_access)) -> dict:
+    response.status_code, res = check(
+        requests.post(url=f"{registry_url}/projects/{project}/anchors", json=definition, headers=get_api_header(
+            access.user_name)))
     return res
 
 
-@router.post("/projects/{project}/anchors/{anchor}/features", name="Create new anchor features of my project [Write Access Required]")
-def new_project_anchor_feature(project: str, anchor: str, definition: dict, response: Response, access: UserAccess = Depends(project_write_access)) -> dict:
-    response.status_code, res = check(requests.post(url=f"{registry_url}/projects/{project}/anchors/{anchor}/features", json=definition, headers=get_api_header(
-        access.user_name)))
+@router.post("/projects/{project}/anchors/{anchor}/features",
+             name="Create new anchor features of my project [Write Access Required]")
+def new_project_anchor_feature(project: str, anchor: str, definition: dict, response: Response,
+                               access: UserAccess = Depends(project_write_access)) -> dict:
+    response.status_code, res = check(
+        requests.post(url=f"{registry_url}/projects/{project}/anchors/{anchor}/features", json=definition,
+                      headers=get_api_header(
+                          access.user_name)))
     return res
 
 
-@router.post("/projects/{project}/derivedfeatures", name="Create new derived features of my project [Write Access Required]")
-def new_project_derived_feature(project: str, definition: dict, response: Response, access: UserAccess = Depends(project_write_access)) -> dict:
+@router.post("/projects/{project}/derivedfeatures",
+             name="Create new derived features of my project [Write Access Required]")
+def new_project_derived_feature(project: str, definition: dict, response: Response,
+                                access: UserAccess = Depends(project_write_access)) -> dict:
     response.status_code, res = check(requests.post(url=f"{registry_url}/projects/{project}/derivedfeatures",
                                                     json=definition, headers=get_api_header(access.user_name)))
     return res
+
 
 # Below are access control management APIs
 
@@ -167,7 +183,7 @@ def delete_userrole(user: str, role: str, reason: str, access: UserAccess = Depe
 
 @router.post("/captcha/send")
 def send_captcha(email: str, type: CaptchaType = Query(..., title='type',
-                                       enum=CaptchaType.__members__.values())):
+                                                       enum=CaptchaType.__members__.values())):
     iam.send_captcha(email, type)
     return ResponseWrapper(True)
 
@@ -178,8 +194,8 @@ def register_user(user: RegisterUser):
 
 
 @router.post("/okta/login", name="Akta login")
-def register_user(access_token: str):
-    return ResponseWrapper(iam.akta_login(access_token))
+def register_user(okta_login: OktaLogin):
+    return ResponseWrapper(iam.okta_login(okta_login.code, okta_login.redirect_uri))
 
 
 @router.post("/login", name="User login")
@@ -192,7 +208,6 @@ def reset_password(user_reset_password: UserResetPassword):
     iam.reset_password(user_reset_password.email, user_reset_password.new_password,
                        user_reset_password.captcha)
     return ResponseWrapper(True)
-
 
 
 @router.post("/users/email/check", name="Check Email if exists")

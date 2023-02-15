@@ -16,7 +16,7 @@ import {
   LoginModel,
   ResponseType,
   SignupModel,
-  ForgotPasswordModel
+  ForgotPasswordModel, LoginOktaModel
 } from '@/models/model'
 import { getMsalConfig } from '@/utils/utils'
 
@@ -310,6 +310,13 @@ export const forgotPassword = async (data: ForgotPasswordModel) => {
 export const login = async (data: LoginModel) => {
   const axios = await authAxios(msalInstance)
   return axios.post(`${getApiBaseUrl()}/login`, data).then((response) => {
+    return response
+  })
+}
+
+export const loginOkta = async (data: LoginOktaModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios.post(`${getApiBaseUrl()}/okta/login`, data).then((response) => {
     return response
   })
 }

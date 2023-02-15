@@ -228,27 +228,27 @@ class OrmIAM(IAM):
         session.close()
         return user_id
 
-    def akta_login(self, access_token):
+    def okta_login(self, code: str, redirect_uri: str):
         """If already have a Feathr user, return successful login. If not, generate a new user"""
         session = self.Session()
-        okta_user_info_str = okta.get_user_info(access_token)
-        okta_user_info = OkataUserInfo(**okta_user_info_str)
+        access_token = okta.get_token_by_code(code, redirect_uri)
+        okta_user_info_json = okta.get_user_info(access_token)
         okta_user = session.query(SsoUserEntity) \
-            .filter(SsoUserEntity.sso_user_id == okta_user_info.sub,
+            .filter(SsoUserEntity.sso_user_id == okta_user_info_json['sub'],
                     SsoUserEntity.platform == SsoUserPlatform.OKTA.value) \
             .order_by(SsoUserEntity.create_time.desc()).first()
         if okta_user is None:
             # Save Feathr user
-            self.__check_email_exists(session, okta_user_info.email)
-            user = UserEntity(id=uuid4(), email=okta_user_info.email)
+            self.__check_email_exists(session, okta_user_info_json['email'])
+            user = UserEntity(id=uuid4(), email=okta_user_info_json['email'])
             session.add(user)
-            okta_user = SsoUserEntity(id=uuid4(), user_id=user.id, sso_user_id=okta_user_info.sub,
-                                      platform=SsoUserPlatform.OKTA.value, sso_email=okta_user_info.email,
-                                      access_token=access_token, source_str=json.dumps(okta_user_info_str))
+            okta_user = SsoUserEntity(id=uuid4(), user_id=user.id, sso_user_id=okta_user_info_json['sub'],
+                                      platform=SsoUserPlatform.OKTA.value, sso_email=okta_user_info_json['email'],
+                                      access_token=access_token, source_str=json.dumps(okta_user_info_json))
             session.add(okta_user)
         else:
             okta_user.access_token = access_token
-            okta_user.sso_email = okta_user_info.email
+            okta_user.sso_email = okta_user_info_json['email']
             okta_user.update_time = datetime.datetime.utcnow()
 
         # Search user and return
@@ -337,7 +337,10 @@ class OrmIAM(IAM):
                           'role': organizationUserRelation.role,
                           'create_time': userEntity.create_time,
                           'update_time': userEntity.update_time})
+        total = session.query(OrganizationUserRelation, UserEntity) \
+            .join(UserEntity).filter(*filters).count()
         session.close()
+        # return {'data': users, 'total': total}
         return users
 
     def get_user_by_email(self, email: str):
@@ -359,6 +362,7 @@ class OrmIAM(IAM):
                                   'role': organizationUserRelation.role})
         return {
             'organizations': organizations,
+            'name': user.email,
             'token': jwt.encode({
                 'sub': user.id,
                 'iat': int(time.time()),

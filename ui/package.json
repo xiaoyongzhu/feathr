@@ -13,6 +13,7 @@
     "lint-stylelint": "stylelint --config .stylelintrc src/**/*.{less,css}"
   },
   "dependencies": {
+    "@okta/okta-auth-js": "7.2.0",
     "@ant-design/icons": "^4.7.0",
     "@azure/msal-browser": "^2.24.0",
     "@azure/msal-react": "^1.4.0",

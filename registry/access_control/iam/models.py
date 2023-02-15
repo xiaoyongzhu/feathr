@@ -23,6 +23,11 @@ class UserLogin(BaseModel):
     password: constr(min_length=5)
 
 
+class OktaLogin(BaseModel):
+    code: constr(min_length=5)
+    redirect_uri: constr(min_length=5)
+
+
 class UserResetPassword(BaseModel):
     email: constr(min_length=5)
     new_password: constr(min_length=5)
