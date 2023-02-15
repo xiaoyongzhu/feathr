@@ -178,6 +178,11 @@ export interface LoginModel {
   password: string
 }
 
+export interface LoginOktaModel {
+  code: string
+  redirect_uri: string
+}
+
 export interface SignupModel {
   email: string
   password: string
