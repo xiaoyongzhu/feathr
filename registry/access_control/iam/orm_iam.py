@@ -4,6 +4,7 @@ import string
 import time
 import datetime
 import random
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey
@@ -132,12 +133,10 @@ class OrmIAM(IAM):
         self.Session = sessionmaker(bind=self.engine)
 
         # init email server
-        smtp_obj = smtplib.SMTP()
-        # 连接到服务器
-        smtp_obj.connect(config.EMAIL_SENDER_HOST, config.EMAIL_SENDER_PORT)
+        self.smtp_obj = smtplib.SMTP(config.EMAIL_SENDER_HOST, config.EMAIL_SENDER_PORT)
+        self.smtp_obj.starttls()
         # 登录到服务器
-        smtp_obj.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
-        self.smtp_obj = smtp_obj
+        self.smtp_obj.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
         self.smtp_sender = config.EMAIL_SENDER_ADDRESS
 
     def create_tables(self):
@@ -204,9 +203,17 @@ class OrmIAM(IAM):
                                     code=code, status=CaptchaStatus.SEND.value)
 
         # Send email
-        self.smtp_obj.sendmail(
-            self.smtp_sender, email,
-            MIMEText(f'Type: {type.value}, Verification Code: {code}', 'plain', 'utf-8').as_string())
+        # self.smtp_obj.sendmail(
+        #     self.smtp_sender, email,
+        #     MIMEText(f'Type: {type.value}, Verification Code: {code}', 'plain', 'utf-8').as_string())
+        msg = MIMEMultipart()
+        msg['From'] = self.smtp_sender
+        msg['To'] = email
+        msg['Subject'] = type.value
+        body = f'Type: {type.value}, Verification Code: {code}'
+        # 添加邮件正文
+        msg.attach(MIMEText(body, 'plain'))
+        self.smtp_obj.sendmail(self.smtp_sender, [email], msg.as_string())
 
         session.add(new_captcha)
         session.commit()
