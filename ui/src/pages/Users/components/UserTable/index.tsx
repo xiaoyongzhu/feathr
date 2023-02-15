@@ -2,14 +2,14 @@ import React, { forwardRef, useState } from 'react'
 
 import { DeleteOutlined } from '@ant-design/icons'
 import { Button, Space, notification, Popconfirm, message } from 'antd'
+import dayjs from 'dayjs'
 import { useQuery } from 'react-query'
-import { useNavigate } from 'react-router-dom'
 
-import { fetchProjects, deleteEntity, fetchUsers, removeUser } from '@/api'
+import { fetchUsers, removeUser } from '@/api'
 import ResizeTable, { ResizeColumnType } from '@/components/ResizeTable'
-import { Project, User } from '@/models/model'
+import { User } from '@/models/model'
 
-import ChangeUser from '../InviteUser'
+import ChangeUser from '../ChangeUser'
 
 export interface ProjectTableProps {
   keyword?: string
@@ -18,6 +18,8 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
   const { keyword } = props
 
   const [open, setOpen] = useState<boolean>(false)
+
+  const [userInfo, setUserInfo] = useState<any>({})
 
   const changeUser = (userInfo: User) => {
     console.log('userInfo', userInfo)
@@ -41,13 +43,19 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
       key: 'Crete Time',
       title: 'Crete Time',
       dataIndex: 'create_time',
-      resize: false
+      resize: false,
+      render: (col: string) => {
+        return dayjs(col).format('YYYY-MM-DD HH:mm:ss')
+      }
     },
     {
       key: 'Update Time',
       title: 'Update Time',
       dataIndex: 'update_time',
-      resize: false
+      resize: false,
+      render: (col: string) => {
+        return dayjs(col).format('YYYY-MM-DD HH:mm:ss')
+      }
     },
     {
       key: 'action',
@@ -62,6 +70,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
               ghost
               type="primary"
               onClick={() => {
+                setUserInfo(record)
                 changeUser(record)
               }}
             >
@@ -124,13 +133,21 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
   return (
     <>
       <ResizeTable
+        key={'id'}
         rowKey="name"
         loading={isLoading}
         columns={columns}
         dataSource={tableData}
         scroll={{ x: '100%' }}
       />
-      <ChangeUser open={open} setOpen={setOpen}></ChangeUser>
+      <ChangeUser
+        resetList={() => {
+          refetch()
+        }}
+        open={open}
+        setOpen={setOpen}
+        userInfo={userInfo}
+      ></ChangeUser>
     </>
   )
 }

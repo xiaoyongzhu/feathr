@@ -4,7 +4,7 @@ import { LockOutlined, UserOutlined, AimOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Row, Col, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
-import { signup } from '@/api'
+import { signup, signupOpt } from '@/api'
 import { SignupModel } from '@/models/model'
 
 import styles from './index.module.less'
@@ -13,6 +13,8 @@ const App: React.FC = () => {
   const navigate = useNavigate()
   const [form] = Form.useForm()
   const [codeCheck, setCodeCheck] = useState<boolean>(false)
+  const [checkLoading, setCheckLoading] = useState<boolean>(false)
+
   const [code, setCode] = useState<number>(0)
   const onFinish = async () => {
     const values = (await form.validateFields()) as SignupModel
@@ -27,10 +29,19 @@ const App: React.FC = () => {
   }
 
   const sendOpt = async () => {
-    setCodeCheck(true)
-    const values = await form.validateFields()
-    await signup(values)
-    setCode(60)
+    setCheckLoading(true)
+    try {
+      setCodeCheck(true)
+      const values = await form.validateFields()
+      const response = await signupOpt({ ...values, type: 'REGISTER' })
+      const data = response.data
+      if (data.status === 'SUCCESS') {
+        setCode(60)
+      }
+      setCheckLoading(false)
+    } catch (e) {
+      setCheckLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -54,17 +65,7 @@ const App: React.FC = () => {
           onFinish={onFinish}
         >
           <Form.Item name="email" rules={[{ required: true, message: 'Please input your Email!' }]}>
-            <Input prefix={<UserOutlined className="site-form-item-icon" />} placeholder="email" />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: 'Please input your Password!' }]}
-          >
-            <Input
-              prefix={<LockOutlined className="site-form-item-icon" />}
-              type="password"
-              placeholder="Password"
-            />
+            <Input prefix={<UserOutlined className="site-form-item-icon" />} placeholder="Email" />
           </Form.Item>
           <Form.Item>
             <Row gutter={8}>
@@ -78,12 +79,23 @@ const App: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col span={6}>
-                <Button block disabled={code > 0} onClick={sendOpt}>
+                <Button block disabled={code > 0} loading={checkLoading} onClick={sendOpt}>
                   {code > 0 ? code : 'Send'}
                 </Button>
               </Col>
             </Row>
           </Form.Item>
+          <Form.Item
+            name="password"
+            rules={[{ required: !codeCheck, message: 'Please input your Password!' }]}
+          >
+            <Input
+              prefix={<LockOutlined className="site-form-item-icon" />}
+              type="password"
+              placeholder="Password"
+            />
+          </Form.Item>
+
           <div className={styles.signUpBtnBox}>
             <Button type="primary" htmlType="submit">
               Sign Up

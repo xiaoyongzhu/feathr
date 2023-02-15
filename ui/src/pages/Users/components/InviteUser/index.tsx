@@ -1,6 +1,6 @@
 import React, { forwardRef, useRef } from 'react'
 
-import { Form, Modal, Input, Select } from 'antd'
+import { Form, Modal, Input, Select, message } from 'antd'
 
 import { inviteUser } from '@/api'
 
@@ -9,6 +9,7 @@ const { Option } = Select
 export interface InviteUserProps {
   open: boolean
   setOpen: any
+  resetList?: () => void
 }
 
 const { Item } = Form
@@ -16,7 +17,7 @@ const { Item } = Form
 const InviteUser = (props: InviteUserProps, ref: any) => {
   const [form] = Form.useForm()
 
-  const { open, setOpen } = props
+  const { open, setOpen, resetList } = props
 
   const hideModal = () => {
     setOpen(false)
@@ -27,6 +28,10 @@ const InviteUser = (props: InviteUserProps, ref: any) => {
     const { status } = await inviteUser(params)
     if (status === 'SUCCESS') {
       setOpen(false)
+      message.success('Success')
+      if (resetList) {
+        resetList()
+      }
     }
   }
 

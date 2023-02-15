@@ -183,6 +183,11 @@ export interface LoginOktaModel {
   redirect_uri: string
 }
 
+export interface SignupOptModel {
+  email: string
+  type: string
+}
+
 export interface SignupModel {
   email: string
   password: string

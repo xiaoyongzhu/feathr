@@ -1,14 +1,16 @@
-import React, { forwardRef, useRef } from 'react'
+import React, { forwardRef, useEffect, useRef } from 'react'
 
-import { Form, Modal, Input, Select } from 'antd'
+import { Form, Modal, Input, Select, message } from 'antd'
 
-import { inviteUser } from '@/api'
+import { changeUser } from '@/api'
 
 const { Option } = Select
 
 export interface ChangeUserProps {
   open: boolean
   setOpen: any
+  userInfo?: { role: string; id: string }
+  resetList?: () => void
 }
 
 const { Item } = Form
@@ -16,7 +18,7 @@ const { Item } = Form
 const ChangeUser = (props: ChangeUserProps, ref: any) => {
   const [form] = Form.useForm()
 
-  const { open, setOpen } = props
+  const { open, setOpen, userInfo, resetList } = props
 
   const hideModal = () => {
     setOpen(false)
@@ -24,11 +26,22 @@ const ChangeUser = (props: ChangeUserProps, ref: any) => {
 
   const onFinish = async () => {
     const params = await form.getFieldsValue()
-    const { status } = await inviteUser(params)
+    const { status } = await changeUser(params, userInfo?.id || '')
     if (status === 'SUCCESS') {
       setOpen(false)
+      message.success('Success')
+      if (resetList) {
+        resetList()
+      }
     }
   }
+
+  useEffect(() => {
+    if (open && userInfo && userInfo.role) {
+      form.setFieldsValue({ role: userInfo.role })
+    }
+  }, [open, userInfo])
+
   return (
     <Modal
       title="Change User"
@@ -41,9 +54,9 @@ const ChangeUser = (props: ChangeUserProps, ref: any) => {
       <Form form={form} name="control-hooks" labelCol={{ span: '5' }} onFinish={onFinish}>
         <Item name="role" label="Role" rules={[{ required: true }]}>
           <Select allowClear placeholder="Select Role">
-            <Option value="admin">Admin</Option>
-            <Option value="user">User</Option>
-            <Option value="other">Other</Option>
+            <Option value="ADMIN">Admin</Option>
+            <Option value="USER">User</Option>
+            <Option value="OTHER">Other</Option>
           </Select>
         </Item>
       </Form>

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 
 import { Layout } from 'antd'
+import Cookies from 'js-cookie'
 import { QueryClient, QueryClientProvider } from 'react-query'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
@@ -40,6 +41,15 @@ const App = () => {
     console.log('window.location.pathname', window.location.pathname)
     return !hiderSiderPath.includes(window.location.pathname)
   }, [window.location.pathname])
+
+  const token = Cookies.get('token')
+
+  const noToken = ['/login', '/forgot-password', '/sign-up']
+
+  if (!token && !noToken.includes(window.location.pathname)) {
+    window.location.href = '/login'
+  }
+
   return (
     <AzureMsal enable={authEnable}>
       <QueryClientProvider client={queryClient}>

@@ -39,7 +39,7 @@ const SearchBar = (props: SearchBarProps, ref: any) => {
       }}
     >
       <Form layout="inline" form={form} onFinish={onSearch}>
-        <Item label="Search" name="project">
+        <Item label="Search" name="keyword">
           <Input
             allowClear
             placeholder="Search Name"
@@ -52,7 +52,13 @@ const SearchBar = (props: SearchBarProps, ref: any) => {
       <Button type="primary" onClick={onInviteUser}>
         + Invite User
       </Button>
-      <InviteUser open={open} setOpen={setOpen}></InviteUser>
+      <InviteUser
+        resetList={() => {
+          form.submit()
+        }}
+        open={open}
+        setOpen={setOpen}
+      ></InviteUser>
     </div>
   )
 }

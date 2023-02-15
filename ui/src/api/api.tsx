@@ -16,7 +16,9 @@ import {
   LoginModel,
   ResponseType,
   SignupModel,
-  ForgotPasswordModel, LoginOktaModel
+  ForgotPasswordModel,
+  LoginOktaModel,
+  SignupOptModel
 } from '@/models/model'
 import { getMsalConfig } from '@/utils/utils'
 
@@ -300,9 +302,18 @@ export const signup = async (data: SignupModel) => {
   })
 }
 
+export const signupOpt = async (data: SignupOptModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios
+    .post<ResponseType>(`${getApiBaseUrl()}/captcha/send`, data, { params: data })
+    .then((response) => {
+      return response
+    })
+}
+
 export const forgotPassword = async (data: ForgotPasswordModel) => {
   const axios = await authAxios(msalInstance)
-  return axios.post<ResponseType>(`${getApiBaseUrl()}/signup`, data).then((response) => {
+  return axios.post<ResponseType>(`${getApiBaseUrl()}/reset-password`, data).then((response) => {
     return response
   })
 }
@@ -340,6 +351,19 @@ export const inviteUser = async (params: { email: string; role: string }) => {
   return axios
     .post<ResponseType>(
       `${getApiBaseUrl()}/organizations/${organizationId}/invite?${qs.stringify(params)}`
+    )
+    .then((response) => {
+      return response.data
+    })
+}
+
+export const changeUser = async (params: { role: string }, userId: string) => {
+  const organizationId = localStorage.getItem('organization_id')
+  const axios = await authAxios(msalInstance)
+  return axios
+    .post<ResponseType>(
+      `${getApiBaseUrl()}/organizations/${organizationId}/users/${userId}`,
+      params
     )
     .then((response) => {
       return response.data

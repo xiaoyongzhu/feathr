@@ -9,6 +9,7 @@ const Projects = () => {
   const [keyword, setKeyword] = useState<string>('')
 
   const onSearch = ({ keyword }: { keyword: string }) => {
+    console.log('keyword', keyword)
     setKeyword(keyword)
   }
 
