@@ -9,7 +9,8 @@ from rbac.db_rbac import DbRBAC
 from rbac.models import User
 
 from iam.orm_iam import OrmIAM, secret_key, ALGORITHM
-from iam.models import AddOrganization, RegisterUser, UserLogin, CaptchaType, UserResetPassword, OktaLogin
+from iam.models import AddOrganization, RegisterUser, UserLogin, CaptchaType, UserResetPassword, OktaLogin, \
+    OrganizationUserEdit
 from iam.models import UserRole
 
 iam = OrmIAM()
@@ -233,6 +234,13 @@ def add_organization(organization_id: str, keyword: str = None,
                      page_size: int = 20, page_no: int = 1,
                      operator_id: str = Depends(get_current_user)):
     return ResponseWrapper(iam.get_users(organization_id, keyword, operator_id, page_size, page_no))
+
+
+@router.post("/organizations/{organization_id}/users/{user_id}", name="Edit user from organization")
+def delete_organization_user(organization_id: str, user_id: str, edit_user: OrganizationUserEdit,
+                             operator_id: str = Depends(get_current_user)):
+    iam.edit_organization_user(organization_id, user_id, edit_user, operator_id)
+    return ResponseWrapper(True)
 
 
 @router.delete("/organizations/{organization_id}/users/{user_id}", name="Remove user from organization")

@@ -16,7 +16,7 @@ import jwt
 import smtplib
 
 from iam.interface import IAM
-from iam.models import RegisterUser, AddOrganization
+from iam.models import RegisterUser, AddOrganization, OrganizationUserEdit
 
 from iam.exceptions import LoginError, ConflictError, EntityNotFoundError, AccessDeniedError
 from iam.models import UserRole, UserStatus
@@ -305,6 +305,22 @@ class OrmIAM(IAM):
         session.commit()
         session.close()
         return 1
+
+    def edit_organization_user(self, organization_id: str, user_id: str, edit_user: OrganizationUserEdit,
+                               operator_id: str):
+        session = self.Session()
+
+        # Check whether have access
+        self.__check_organization_access(session, organization_id, operator_id)
+        organization_user_relation = session.query(OrganizationUserRelation) \
+            .filter(OrganizationUserRelation.organization_id == organization_id,
+                    OrganizationUserRelation.user_id == user_id).first()
+        if organization_user_relation is None:
+            raise EntityNotFoundError('Cannot find this user from organization')
+        organization_user_relation.role = edit_user.role.value
+        session.commit()
+        session.close()
+        return
 
     def remove_organization_user(self, organization_id: str, user_id: str, operator_id: str):
         """Only Manager can operate records"""
