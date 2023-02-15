@@ -132,11 +132,6 @@ class OrmIAM(IAM):
             f'mssql+pymssql://{params["user"]}:{params["password"]}@{params["host"]}/{params["database"]}')
         self.Session = sessionmaker(bind=self.engine)
 
-        # init email server
-        self.smtp_obj = smtplib.SMTP(config.EMAIL_SENDER_HOST, config.EMAIL_SENDER_PORT)
-        self.smtp_obj.starttls()
-        # 登录到服务器
-        self.smtp_obj.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
         self.smtp_sender = config.EMAIL_SENDER_ADDRESS
 
     def create_tables(self):
@@ -206,6 +201,7 @@ class OrmIAM(IAM):
         # self.smtp_obj.sendmail(
         #     self.smtp_sender, email,
         #     MIMEText(f'Type: {type.value}, Verification Code: {code}', 'plain', 'utf-8').as_string())
+        smtp_obj = self.get_email_sender()
         msg = MIMEMultipart()
         msg['From'] = self.smtp_sender
         msg['To'] = email
@@ -213,7 +209,8 @@ class OrmIAM(IAM):
         body = f'Type: {type.value}, Verification Code: {code}'
         # 添加邮件正文
         msg.attach(MIMEText(body, 'plain'))
-        self.smtp_obj.sendmail(self.smtp_sender, [email], msg.as_string())
+        smtp_obj.sendmail(self.smtp_sender, [email], msg.as_string())
+        smtp_obj.close()
 
         session.add(new_captcha)
         session.commit()
@@ -376,6 +373,14 @@ class OrmIAM(IAM):
                 'name': user.email
             }, secret_key, algorithm=ALGORITHM)
         }
+
+    def get_email_sender(self):
+        # init email server
+        smtp_obj = smtplib.SMTP(config.EMAIL_SENDER_HOST, config.EMAIL_SENDER_PORT)
+        smtp_obj.starttls()
+        # 登录到服务器
+        smtp_obj.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
+        return smtp_obj
 
     def __verify_code(self, session, receiver: str, type: CaptchaType, captcha: str):
         """Check whether the captcha is correct"""
