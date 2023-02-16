@@ -36,7 +36,10 @@ secret_key = 'feathr123#@!'
 default_password = 'feathr123#@!'
 ALGORITHM = 'HS256'
 
-"""The ORM implementation of IAM function"""
+"""The ORM implementation of IAM function
+Management of organization and user-related, login, registration, reset password
+implemented using ORM, requiring configuration of ORM driver and email sender.
+"""
 
 
 # define entities
@@ -118,20 +121,21 @@ def parse_conn_str(s: str) -> dict:
         "database": parts["Initial Catalog"],
         "user": parts["User ID"],
         "password": parts["Password"],
-        # "charset": "utf-8",   ## For unknown reason this causes connection failure
     }
 
 
 class OrmIAM(IAM):
     def __init__(self):
-        conn_str = os.environ["RBAC_CONNECTION_STR"]
-        if "Server=" not in conn_str:
-            raise RuntimeError("`RBAC_CONNECTION_STR` is not in ADO connection string format")
-        params = parse_conn_str(conn_str)
-        self.engine = create_engine(
-            f'mssql+pymssql://{params["user"]}:{params["password"]}@{params["host"]}/{params["database"]}')
+        if os.environ.get("FEATHR_SANDBOX"):
+            self.engine = create_engine('file::memory:?cache=shared')
+        else:
+            conn_str = os.environ["RBAC_CONNECTION_STR"]
+            if "Server=" not in conn_str:
+                raise RuntimeError("`RBAC_CONNECTION_STR` is not in ADO connection string format")
+            params = parse_conn_str(conn_str)
+            self.engine = create_engine(
+                f'mssql+pymssql://{params["user"]}:{params["password"]}@{params["host"]}/{params["database"]}')
         self.Session = sessionmaker(bind=self.engine)
-
         self.smtp_sender = config.EMAIL_SENDER_ADDRESS
 
     def create_tables(self):

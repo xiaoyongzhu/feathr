@@ -56,7 +56,6 @@ const ChangeUser = (props: ChangeUserProps, ref: any) => {
           <Select allowClear placeholder="Select Role">
             <Option value="ADMIN">Admin</Option>
             <Option value="USER">User</Option>
-            <Option value="OTHER">Other</Option>
           </Select>
         </Item>
       </Form>
