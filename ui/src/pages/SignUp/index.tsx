@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import { LockOutlined, UserOutlined, AimOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Row, Col, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
-import styles from './index.module.less'
-
 import { signup, signupOpt } from '@/api'
 import { SignupModel } from '@/models/model'
+
+import styles from './index.module.less'
 
 const App: React.FC = () => {
   const navigate = useNavigate()

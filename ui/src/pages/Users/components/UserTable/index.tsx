@@ -5,11 +5,11 @@ import { Button, Space, notification, Popconfirm, message } from 'antd'
 import dayjs from 'dayjs'
 import { useQuery } from 'react-query'
 
-import ChangeUser from '../ChangeUser'
-
 import { fetchUsers, removeUser } from '@/api'
 import ResizeTable, { ResizeColumnType } from '@/components/ResizeTable'
 import { User } from '@/models/model'
+
+import ChangeUser from '../ChangeUser'
 
 export interface ProjectTableProps {
   keyword?: string
@@ -63,7 +63,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
       width: 240,
       resize: false,
       render: (record: User) => {
-        const { name, id } = record
+        const { id } = record
         return (
           <Space size="middle">
             <Button

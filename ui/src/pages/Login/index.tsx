@@ -1,16 +1,15 @@
 import React from 'react'
 
-import { LockOutlined, UserOutlined, AlipayOutlined } from '@ant-design/icons'
-import { Button, Checkbox, Form, Input, Row, Col, message } from 'antd'
+import { LockOutlined, UserOutlined } from '@ant-design/icons'
+import { Button, Checkbox, Form, Input, message } from 'antd'
 import Cookies from 'js-cookie'
-
-import styles from './index.module.less'
 
 import { login } from '@/api'
 import { LoginModel } from '@/models/model'
 
+import styles from './index.module.less'
+
 const App: React.FC = () => {
-  const oktaIcon = require('./images/okta-icon.jpg').default
   const onFinish = (values: LoginModel) => {
     if (!values.email || !values.password) {
       return
@@ -98,23 +97,15 @@ const App: React.FC = () => {
             </Button>
           </Form.Item>
           <div className={styles.loginRemember}>
-            <div className={styles.loginRemember}>
+            <div className={styles.loginRememberOther}>
               Others
-              {/*<Button*/}
-              {/*  type="primary"*/}
-              {/*  style={{marginLeft: 10}}*/}
-              {/*  shape="circle"*/}
-              {/*  size="small"*/}
-              {/*  icon={<AlipayOutlined/>}*/}
-              {/*  onClick={handleOktaLogin}*/}
-              {/*>*/}
-              {/*</Button>*/}
-              <img
-                style={{ marginLeft: 10, width: '35px', cursor: 'pointer' }}
-                src={'/okta-icon.jpg'}
-                alt="Okta"
-                onClick={handleOktaLogin}
-              />
+              <div onClick={handleOktaLogin}>
+                <img
+                  style={{ marginLeft: 10, width: '35px', cursor: 'pointer' }}
+                  src={'/okta-icon.jpg'}
+                  alt="Okta"
+                />
+              </div>
             </div>
             <a href="/sign-up">Sign Up</a>
           </div>

@@ -4,7 +4,6 @@ import { message } from 'antd'
 import Cookies from 'js-cookie'
 
 import { loginOkta } from '@/api'
-import { LoginOktaModel } from '@/models/model'
 
 const App: React.FC = () => {
   const handleLoginOkta = (code: string, redirect: string) => {

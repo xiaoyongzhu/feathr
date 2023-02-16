@@ -4,10 +4,10 @@ import { LockOutlined, UserOutlined, AimOutlined } from '@ant-design/icons'
 import { Button, message, Form, Input, Row, Col } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
-import styles from './index.module.less'
-
 import { forgotPassword, signupOpt } from '@/api'
 import { ForgotPasswordModel } from '@/models/model'
+
+import styles from './index.module.less'
 
 const App: React.FC = () => {
   const navigate = useNavigate()
