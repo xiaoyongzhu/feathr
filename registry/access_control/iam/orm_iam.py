@@ -7,7 +7,8 @@ import random
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey
+import sqlalchemy
+from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey, StaticPool
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from uuid import uuid4
@@ -16,25 +17,19 @@ import jwt
 import smtplib
 
 from iam.interface import IAM
-from iam.models import RegisterUser, AddOrganization, OrganizationUserEdit
+from iam.models import RegisterUser, AddOrganization, OrganizationUserEdit, UserRole, UserStatus, CaptchaType, \
+    CaptchaStatus, SsoUserPlatform
 
 from iam.exceptions import LoginError, ConflictError, EntityNotFoundError, AccessDeniedError
-from iam.models import UserRole, UserStatus
-
-from iam.models import CaptchaType
-from rbac import config
-
-from iam.models import CaptchaStatus
 from iam import okta
-
-from iam.models import SsoUserPlatform
-from iam.okta import OkataUserInfo
 
 Base = declarative_base()
 
 secret_key = 'feathr123#@!'
-default_password = 'feathr123#@!'
+default_password = '123456'
 ALGORITHM = 'HS256'
+
+print(sqlalchemy.__version__)
 
 """The ORM implementation of IAM function
 Management of organization and user-related, login, registration, reset password
@@ -127,19 +122,22 @@ def parse_conn_str(s: str) -> dict:
 class OrmIAM(IAM):
     def __init__(self):
         if os.environ.get("FEATHR_SANDBOX"):
-            self.engine = create_engine('file::memory:?cache=shared')
+            self.engine = create_engine('sqlite:///:memory:', connect_args={'check_same_thread': False},
+                                        poolclass=StaticPool)
         else:
-            conn_str = os.environ["RBAC_CONNECTION_STR"]
+            conn_str = os.environ['RBAC_CONNECTION_STR']
             if "Server=" not in conn_str:
                 raise RuntimeError("`RBAC_CONNECTION_STR` is not in ADO connection string format")
             params = parse_conn_str(conn_str)
             self.engine = create_engine(
                 f'mssql+pymssql://{params["user"]}:{params["password"]}@{params["host"]}/{params["database"]}')
         self.Session = sessionmaker(bind=self.engine)
-        self.smtp_sender = config.EMAIL_SENDER_ADDRESS
+        self.smtp_sender = os.environ['EMAIL_SENDER_ADDRESS']
 
-    def create_tables(self):
-        Base.metadata.create_all(self.engine)
+        # If SandBox, need init test data
+        if os.environ.get("FEATHR_SANDBOX"):
+            self.__create_tables()
+            self.__init_sandbox_data()
 
     def add_organization(self, add_organization: AddOrganization):
         """After adding the organization successfully, an administrator will be generated."""
@@ -153,16 +151,18 @@ class OrmIAM(IAM):
         self.__check_email_exists(session, add_organization.email)
 
         # save organization
-        new_organization = OrganizationEntity(id=uuid4(), name=add_organization.name, remark=add_organization.remark)
+        new_organization = OrganizationEntity(id=self.__get_uuid(), name=add_organization.name,
+                                              remark=add_organization.remark)
         session.add(new_organization)
         new_organization_id = new_organization.id
 
         # save administrator and relationship
-        new_user = UserEntity(id=uuid4(), email=add_organization.email,
+        new_user = UserEntity(id=self.__get_uuid(), email=add_organization.email,
                               password=self.__digest_password(default_password))
         session.add(new_user)
-        session.add(OrganizationUserRelation(id=uuid4(), organization_id=new_organization.id, user_id=new_user.id,
-                                             role=UserRole.ADMIN.value))
+        session.add(
+            OrganizationUserRelation(id=self.__get_uuid(), organization_id=new_organization.id, user_id=new_user.id,
+                                     role=UserRole.ADMIN.value))
 
         session.commit()
         session.close()
@@ -198,13 +198,9 @@ class OrmIAM(IAM):
                 raise AccessDeniedError("Need previous verification code expires")
         code = self.__generate_code()
 
-        new_captcha = CaptchaEntity(id=uuid4(), receiver=email, type=type.value,
+        new_captcha = CaptchaEntity(id=self.__get_uuid(), receiver=email, type=type.value,
                                     code=code, status=CaptchaStatus.SEND.value)
 
-        # Send email
-        # self.smtp_obj.sendmail(
-        #     self.smtp_sender, email,
-        #     MIMEText(f'Type: {type.value}, Verification Code: {code}', 'plain', 'utf-8').as_string())
         smtp_obj = self.get_email_sender()
         msg = MIMEMultipart()
         msg['From'] = self.smtp_sender
@@ -228,7 +224,7 @@ class OrmIAM(IAM):
         # Check if the captcha is right
         self.__verify_code(session, register_user.email, CaptchaType.REGISTER, register_user.captcha)
 
-        new_user = UserEntity(id=uuid4(), email=register_user.email,
+        new_user = UserEntity(id=self.__get_uuid(), email=register_user.email,
                               password=self.__digest_password(register_user.password))
         session.add(new_user)
         session.commit()
@@ -248,9 +244,9 @@ class OrmIAM(IAM):
         if okta_user is None:
             # Save Feathr user
             self.__check_email_exists(session, okta_user_info_json['email'])
-            user = UserEntity(id=uuid4(), email=okta_user_info_json['email'])
+            user = UserEntity(id=self.__get_uuid(), email=okta_user_info_json['email'])
             session.add(user)
-            okta_user = SsoUserEntity(id=uuid4(), user_id=user.id, sso_user_id=okta_user_info_json['sub'],
+            okta_user = SsoUserEntity(id=self.__get_uuid(), user_id=user.id, sso_user_id=okta_user_info_json['sub'],
                                       platform=SsoUserPlatform.OKTA.value, sso_email=okta_user_info_json['email'],
                                       access_token=access_token, source_str=json.dumps(okta_user_info_json))
             session.add(okta_user)
@@ -304,7 +300,7 @@ class OrmIAM(IAM):
         if organization_users is not None:
             return 0
 
-        session.add(OrganizationUserRelation(id=uuid4(), organization_id=organization_id,
+        session.add(OrganizationUserRelation(id=self.__get_uuid(), organization_id=organization_id,
                                              user_id=user.id, role=role.value))
         session.commit()
         session.close()
@@ -396,10 +392,10 @@ class OrmIAM(IAM):
 
     def get_email_sender(self):
         # init email server
-        smtp_obj = smtplib.SMTP(config.EMAIL_SENDER_HOST, config.EMAIL_SENDER_PORT)
+        smtp_obj = smtplib.SMTP(os.environ['EMAIL_SENDER_HOST'], os.environ['EMAIL_SENDER_PORT'])
         smtp_obj.starttls()
         # 登录到服务器
-        smtp_obj.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
+        smtp_obj.login(os.environ['EMAIL_SENDER_ADDRESS'], os.environ['EMAIL_SENDER_PASSWORD'])
         return smtp_obj
 
     def __verify_code(self, session, receiver: str, type: CaptchaType, captcha: str):
@@ -442,3 +438,22 @@ class OrmIAM(IAM):
     def __generate_code(self, ):
         code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
         return code
+
+    def __create_tables(self):
+        Base.metadata.create_all(self.engine)
+
+    def __init_sandbox_data(self):
+        """Init test data"""
+        session = self.Session()
+        organization = session.query(OrganizationEntity).filter_by(name='Feathr').first()
+        if organization is None:
+            self.add_organization(AddOrganization(name='Feathr', email='feathr@163.com', remark='Sandbox test data'))
+            try:
+                self.login('3455555', '3333333')
+            except LoginError:
+                print('login failed')
+        session.commit()
+        session.close()
+
+    def __get_uuid(self):
+        return str(uuid4())

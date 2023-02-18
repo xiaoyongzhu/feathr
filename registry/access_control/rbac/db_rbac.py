@@ -18,7 +18,7 @@ class DbRBAC(RBAC):
         if not os.environ.get("RBAC_CONNECTION_STR"):
             os.environ["RBAC_CONNECTION_STR"] = config.RBAC_CONNECTION_STR
         self.conn = connect()
-        self.get_userroles()
+        # self.get_userroles()
         self.projects_ids = {}
 
     def get_userroles(self):
