@@ -31,9 +31,6 @@ import SideMenu from './components/SiderMenu/siteMenu'
 
 const queryClient = new QueryClient()
 
-const enableRBAC = window.environment?.enableRBAC
-const authEnable: boolean = (enableRBAC ? enableRBAC : process.env.REACT_APP_ENABLE_RBAC) === 'true'
-
 const App = () => {
   const hiderSiderPath = ['/forgot-password', '/login', '/sign-up']
 
@@ -51,7 +48,7 @@ const App = () => {
   }
 
   return (
-    <AzureMsal enable={authEnable}>
+    <AzureMsal enable={false}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <Layout style={{ minHeight: '100vh', position: 'relative' }}>

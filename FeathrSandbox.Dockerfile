@@ -6,7 +6,8 @@ WORKDIR /usr/src/ui
 COPY ./ui .
 
 ## Use api endpoint from same host and build production static bundle
-RUN echo 'REACT_APP_API_ENDPOINT=http://localhost:8000' >> .env.production
+RUN echo 'REACT_APP_API_ENDPOINT=http://localhost:8000' >> .env.production \
+    && echo 'REACT_APP_OKTA_CALLBACK_URI=http://localhost:8081/okta-login/callback' >> .env.production
 RUN npm install && npm run build
 
 
@@ -37,6 +38,9 @@ COPY ./registry /usr/src/registry
 WORKDIR /usr/src/registry/sql-registry
 RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
+# install iam registry
+WORKDIR /usr/src/registry/access_control
+RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 
 ## Start service and then start nginx

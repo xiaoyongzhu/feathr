@@ -448,10 +448,6 @@ class OrmIAM(IAM):
         organization = session.query(OrganizationEntity).filter_by(name='Feathr').first()
         if organization is None:
             self.add_organization(AddOrganization(name='Feathr', email='feathr@163.com', remark='Sandbox test data'))
-            try:
-                self.login('3455555', '3333333')
-            except LoginError:
-                print('login failed')
         session.commit()
         session.close()
 
