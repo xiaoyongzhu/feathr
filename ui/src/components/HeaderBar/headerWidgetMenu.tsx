@@ -3,7 +3,7 @@ import React from 'react'
 import { LogoutOutlined } from '@ant-design/icons'
 import { IPublicClientApplication } from '@azure/msal-browser'
 import { Menu, MenuProps } from 'antd'
-import { useNavigate } from 'react-router-dom'
+import Cookies from 'js-cookie'
 
 interface HeaderWidgetMenuProps {
   instance: IPublicClientApplication
@@ -23,6 +23,7 @@ const HeaderWidgetMenu = (props: HeaderWidgetMenuProps) => {
     instance.logoutRedirect().catch((e) => {
       console.error(e)
     })
+    Cookies.remove('token')
     window.location.href = '/login'
   }
 
