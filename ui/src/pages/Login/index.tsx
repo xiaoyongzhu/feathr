@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Form, Input, message } from 'antd'
@@ -10,29 +10,38 @@ import { LoginModel } from '@/models/model'
 import styles from './index.module.less'
 
 const App: React.FC = () => {
+  const [loading, setLoading] = useState(false)
   const onFinish = (values: LoginModel) => {
     if (!values.email || !values.password) {
       return
     }
-    login(values).then((response) => {
-      let data = response.data
-      if (data.status === 'SUCCESS') {
-        data = data.data
-        if (data.organizations.length === 0) {
-          // todo: This user does not have any organizations, need redirect no organization page!
-          message.success('No organizations exist. Please join an organization before logging in.')
-          return
+    setLoading(true)
+    login(values)
+      .then((response) => {
+        let data = response.data
+        if (data.status === 'SUCCESS') {
+          data = data.data
+          if (data.organizations.length === 0) {
+            // todo: This user does not have any organizations, need redirect no organization page!
+            message.success(
+              'No organizations exist. Please join an organization before logging in.'
+            )
+            window.location.href = '/guide'
+            return
+          }
+          message.success('Login Success')
+          const token = data.token
+          Cookies.set('token', token, {
+            expires: 7
+          })
+          localStorage.setItem('organization_id', data.organizations[0].organization_id)
+          localStorage.setItem('user_name', values.email)
+          window.location.href = '/'
         }
-        message.success('Login Success')
-        const token = data.token
-        Cookies.set('token', token, {
-          expires: 7
-        })
-        localStorage.setItem('organization_id', data.organizations[0].organization_id)
-        localStorage.setItem('user_name', values.email)
-        window.location.href = '/'
-      }
-    })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   const handleOktaLogin = () => {
@@ -92,7 +101,13 @@ const App: React.FC = () => {
             </a>
           </div>
           <Form.Item>
-            <Button block type="primary" htmlType="submit" className="login-form-button">
+            <Button
+              block
+              loading={loading}
+              type="primary"
+              htmlType="submit"
+              className="login-form-button"
+            >
               Login
             </Button>
           </Form.Item>

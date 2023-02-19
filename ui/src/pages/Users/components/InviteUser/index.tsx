@@ -1,4 +1,4 @@
-import React, { forwardRef, useRef } from 'react'
+import React, { forwardRef, useState } from 'react'
 
 import { Form, Modal, Input, Select, message } from 'antd'
 
@@ -16,7 +16,7 @@ const { Item } = Form
 
 const InviteUser = (props: InviteUserProps, ref: any) => {
   const [form] = Form.useForm()
-
+  const [loading, setLoading] = useState<boolean>(false)
   const { open, setOpen, resetList } = props
 
   const hideModal = () => {
@@ -24,6 +24,7 @@ const InviteUser = (props: InviteUserProps, ref: any) => {
   }
 
   const onFinish = async () => {
+    setLoading(true)
     const params = await form.getFieldsValue()
     const { status } = await inviteUser(params)
     if (status === 'SUCCESS') {
@@ -33,6 +34,7 @@ const InviteUser = (props: InviteUserProps, ref: any) => {
         resetList()
       }
     }
+    setLoading(false)
   }
 
   return (
@@ -41,6 +43,7 @@ const InviteUser = (props: InviteUserProps, ref: any) => {
       open={open}
       okText="Confirm"
       cancelText="Cancel"
+      confirmLoading={loading}
       onOk={onFinish}
       onCancel={hideModal}
     >

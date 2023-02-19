@@ -12,10 +12,12 @@ import styles from './index.module.less'
 const App: React.FC = () => {
   const navigate = useNavigate()
   const [form] = Form.useForm()
+  const [loading, setLoading] = useState<boolean>(false)
   const [checkLoading, setCheckLoading] = useState<boolean>(false)
   const [codeCheck, setCodeCheck] = useState<boolean>(false)
   const [code, setCode] = useState<number>(0)
   const onFinish = async () => {
+    setLoading(true)
     const values = (await form.validateFields()) as ForgotPasswordModel
     setCodeCheck(false)
     const response = await forgotPassword(values)
@@ -25,6 +27,7 @@ const App: React.FC = () => {
         navigate('/login')
       })
     }
+    setLoading(false)
   }
 
   const sendOpt = async () => {
@@ -98,7 +101,7 @@ const App: React.FC = () => {
           </Form.Item>
 
           <div className={styles.signUpBtnBox}>
-            <Button type="primary" htmlType="submit">
+            <Button type="primary" htmlType="submit" loading={loading}>
               Confirm
             </Button>
             <a className="login-form-forgot" href="/login">

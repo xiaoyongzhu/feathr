@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect } from 'react'
+import React, { forwardRef, useEffect, useState } from 'react'
 
 import { Form, Modal, Select, message } from 'antd'
 
@@ -17,7 +17,7 @@ const { Item } = Form
 
 const ChangeUser = (props: ChangeUserProps, ref: any) => {
   const [form] = Form.useForm()
-
+  const [loading, setLoading] = useState<boolean>(false)
   const { open, setOpen, userInfo, resetList } = props
 
   const hideModal = () => {
@@ -25,6 +25,7 @@ const ChangeUser = (props: ChangeUserProps, ref: any) => {
   }
 
   const onFinish = async () => {
+    setLoading(true)
     const params = await form.getFieldsValue()
     const { status } = await changeUser(params, userInfo?.id || '')
     if (status === 'SUCCESS') {
@@ -34,6 +35,7 @@ const ChangeUser = (props: ChangeUserProps, ref: any) => {
         resetList()
       }
     }
+    setLoading(false)
   }
 
   useEffect(() => {
@@ -48,6 +50,7 @@ const ChangeUser = (props: ChangeUserProps, ref: any) => {
       open={open}
       okText="Confirm"
       cancelText="Cancel"
+      confirmLoading={loading}
       onOk={onFinish}
       onCancel={hideModal}
     >

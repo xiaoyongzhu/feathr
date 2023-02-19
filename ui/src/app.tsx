@@ -10,6 +10,7 @@ import DataSources from '@/pages/DataSources'
 import FeatureDetails from '@/pages/FeatureDetails'
 import Features from '@/pages/Features'
 import ForgotPassword from '@/pages/ForgotPassword'
+import Guide from '@/pages/Guide'
 import Home from '@/pages/Home'
 import Jobs from '@/pages/Jobs'
 import Login from '@/pages/Login'
@@ -35,7 +36,7 @@ const enableRBAC = window.environment?.enableRBAC
 const authEnable: boolean = (enableRBAC ? enableRBAC : process.env.REACT_APP_ENABLE_RBAC) === 'true'
 
 const App = () => {
-  const hiderSiderPath = ['/forgot-password', '/login', '/sign-up']
+  const hiderSiderPath = ['/forgot-password', '/login', '/sign-up', '/guide']
 
   const hideSider = useMemo(() => {
     console.log('window.location.pathname', window.location.pathname)
@@ -78,6 +79,7 @@ const App = () => {
                   />
                   <Route path="/projects/:project/lineage" element={<ProjectLineage />} />
                   <Route path="/jobs" element={<Jobs />} />
+                  <Route path="/guide" element={<Guide />} />
                   <Route path="/monitoring" element={<Monitoring />} />
                   <Route path="/management" element={<Management />} />
                   <Route path="/role-management" element={<RoleManagement />} />
