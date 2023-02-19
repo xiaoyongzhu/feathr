@@ -29,7 +29,6 @@ class AddOrganization(BaseModel):
     name: str
     email: str
     remark: str
-    email: str
 
 
 class RegisterUser(BaseModel):

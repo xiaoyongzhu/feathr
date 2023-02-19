@@ -12,7 +12,7 @@ okta_client_id = os.environ.get('OKTA_CLIENT_ID')
 if okta_client_id is None:
     okta_client_id = '0oa47zdlpcfMYLXeb697'
 
-okta_client_secret = os.environ.get('OKTA_CLIENT_ID')
+okta_client_secret = os.environ.get('OKTA_CLIENT_SECRET')
 if okta_client_secret is None:
     okta_client_secret = 'AQxBks35YR_90s6lPXTW9ZsizjhbWznOMkUe85_-'
 
