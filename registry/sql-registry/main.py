@@ -193,5 +193,3 @@ def new_project_derived_feature(project: str, definition: Dict) -> Dict:
 
 
 app.include_router(prefix=rp, router=router)
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="localhost", port=18000, reload=True)

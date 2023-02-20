@@ -18,6 +18,8 @@ class DbRBAC(RBAC):
         if not os.environ.get("RBAC_CONNECTION_STR"):
             os.environ["RBAC_CONNECTION_STR"] = config.RBAC_CONNECTION_STR
         self.conn = connect()
+        # TODO: The sandbox startup will result in an error, comments this first.
+        # after development is complete, rbac module needs to be removed.
         # self.get_userroles()
         self.projects_ids = {}
 

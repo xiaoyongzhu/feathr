@@ -7,7 +7,6 @@ import random
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-import sqlalchemy
 from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey, StaticPool
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -23,13 +22,9 @@ from iam.models import RegisterUser, AddOrganization, OrganizationUserEdit, User
 from iam.exceptions import LoginError, ConflictError, EntityNotFoundError, AccessDeniedError
 from iam import okta
 
+from iam.config import FEATHR_SANDBOX, DEFAULT_PASSWORD, SECRET_KEY, ALGORITHM
+
 Base = declarative_base()
-
-secret_key = 'feathr123#@!'
-default_password = '123456'
-ALGORITHM = 'HS256'
-
-print(sqlalchemy.__version__)
 
 """The ORM implementation of IAM function
 Management of organization and user-related, login, registration, reset password
@@ -103,39 +98,24 @@ OrganizationEntity.users = relationship("OrganizationUserRelation", back_populat
 UserEntity.organizations = relationship("OrganizationUserRelation", back_populates="user")
 
 
-def parse_conn_str(s: str) -> dict:
-    """
-    TODO: Not a sound and safe implementation, but useful enough in this case
-    as the connection string is provided by users themselves.
-    """
-    parts = dict([p.strip().split("=", 1)
-                  for p in s.split(";") if len(p.strip()) > 0])
-    server = parts["Server"].split(":")[1].split(",")[0]
-    return {
-        "host": server,
-        "database": parts["Initial Catalog"],
-        "user": parts["User ID"],
-        "password": parts["Password"],
-    }
-
 
 class OrmIAM(IAM):
     def __init__(self):
-        if os.environ.get("FEATHR_SANDBOX"):
-            self.engine = create_engine('sqlite:///:memory:', connect_args={'check_same_thread': False},
+        if os.environ.get(FEATHR_SANDBOX):
+            self.engine = create_engine('sqlite:////tmp/feathr_iam.sqlite?check_same_thread=False', connect_args={'check_same_thread': False},
                                         poolclass=StaticPool)
         else:
             conn_str = os.environ['RBAC_CONNECTION_STR']
             if "Server=" not in conn_str:
                 raise RuntimeError("`RBAC_CONNECTION_STR` is not in ADO connection string format")
-            params = parse_conn_str(conn_str)
+            params = self.__parse_conn_str(conn_str)
             self.engine = create_engine(
                 f'mssql+pymssql://{params["user"]}:{params["password"]}@{params["host"]}/{params["database"]}')
         self.Session = sessionmaker(bind=self.engine)
         self.smtp_sender = os.environ['EMAIL_SENDER_ADDRESS']
 
         # If SandBox, need init test data
-        if os.environ.get("FEATHR_SANDBOX"):
+        if os.environ.get(FEATHR_SANDBOX):
             self.__create_tables()
             self.__init_sandbox_data()
 
@@ -158,7 +138,7 @@ class OrmIAM(IAM):
 
         # save administrator and relationship
         new_user = UserEntity(id=self.__get_uuid(), email=add_organization.email,
-                              password=self.__digest_password(default_password))
+                              password=self.__digest_password(DEFAULT_PASSWORD))
         session.add(new_user)
         session.add(
             OrganizationUserRelation(id=self.__get_uuid(), organization_id=new_organization.id, user_id=new_user.id,
@@ -298,13 +278,13 @@ class OrmIAM(IAM):
         organization_users = session.query(OrganizationUserRelation) \
             .filter_by(organization_id=organization_id, user_id=user.id).first()
         if organization_users is not None:
-            return 0
+            return False
 
         session.add(OrganizationUserRelation(id=self.__get_uuid(), organization_id=organization_id,
                                              user_id=user.id, role=role.value))
         session.commit()
         session.close()
-        return 1
+        return True
 
     def edit_organization_user(self, organization_id: str, user_id: str, edit_user: OrganizationUserEdit,
                                operator_id: str):
@@ -387,14 +367,14 @@ class OrmIAM(IAM):
                 'sub': user.id,
                 'iat': int(time.time()),
                 'name': user.email
-            }, secret_key, algorithm=ALGORITHM)
+            }, SECRET_KEY, algorithm=ALGORITHM)
         }
 
     def get_email_sender(self):
         # init email server
         smtp_obj = smtplib.SMTP(os.environ['EMAIL_SENDER_HOST'], os.environ['EMAIL_SENDER_PORT'])
         smtp_obj.starttls()
-        # 登录到服务器
+        # Login to email server
         smtp_obj.login(os.environ['EMAIL_SENDER_ADDRESS'], os.environ['EMAIL_SENDER_PASSWORD'])
         return smtp_obj
 
@@ -453,3 +433,19 @@ class OrmIAM(IAM):
 
     def __get_uuid(self):
         return str(uuid4())
+
+    def __parse_conn_str(self, s: str) -> dict:
+        """
+        TODO: Not a sound and safe implementation, but useful enough in this case
+        as the connection string is provided by users themselves.
+        example: Server=Port:IP;Initial Catalog=****;User ID=***;Password=***
+        """
+        parts = dict([p.strip().split("=", 1)
+                      for p in s.split(";") if len(p.strip()) > 0])
+        server = parts["Server"].split(":")[1].split(",")[0]
+        return {
+            "host": server,
+            "database": parts["Initial Catalog"],
+            "user": parts["User ID"],
+            "password": parts["Password"],
+        }

@@ -44,6 +44,7 @@ def parse_conn_str(s: str) -> dict:
     }
 
 
+# TODO: After development is complete, SQLiteConnection needs to be removed
 class SQLiteConnection(DbConnection):
     @staticmethod
     def connect(autocommit = True):
@@ -202,6 +203,7 @@ class MssqlConnection(DbConnection):
                 conn.commit()
 
 
+# TODO: After development is complete, FEATHR_SANDBOX needs to be removed
 # This is ordered list. So append SQLite first
 if os.environ.get("FEATHR_SANDBOX"):
     providers.append(SQLiteConnection)

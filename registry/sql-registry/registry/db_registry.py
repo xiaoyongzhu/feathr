@@ -94,7 +94,7 @@ class DbRegistry(Registry):
             ret = self._fetch_helper(query)
         else:
             ret = self.conn.query(
-            f"select qualified_name from entities where entity_type=%s", str(EntityType.Project))
+            f"select 5 from entities where entity_type=%s", str(EntityType.Project))
         return list([r["qualified_name"] for r in ret])
     
     def get_projects_ids(self) -> Dict:

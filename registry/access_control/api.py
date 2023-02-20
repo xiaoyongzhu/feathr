@@ -8,7 +8,7 @@ from rbac.access import *
 from rbac.db_rbac import DbRBAC
 from rbac.models import User
 
-from iam.orm_iam import OrmIAM, secret_key, ALGORITHM
+from iam.orm_iam import OrmIAM, SECRET_KEY, ALGORITHM
 from iam.models import AddOrganization, RegisterUser, UserLogin, CaptchaType, UserResetPassword, OktaLogin, \
     OrganizationUserEdit
 from iam.models import UserRole
@@ -18,6 +18,7 @@ iam = OrmIAM()
 router = APIRouter()
 rbac = DbRBAC()
 registry_url = config.RBAC_REGISTRY_URL
+decoded_token_user_key = "sub"
 
 
 class ResponseWrapper:
@@ -31,11 +32,11 @@ def get_current_user(x_token: str = Header(None)):
     if x_token is None:
         raise HTTPException(status_code=400, detail="X-Token header is missing")
     try:
-        decoded_token = jwt.decode(x_token, secret_key, algorithms=[ALGORITHM])
+        decoded_token = jwt.decode(x_token, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.PyJWTError:
         print(jwt.PyJWTError)
         raise HTTPException(status_code=400, detail="Invalid token")
-    user_id = decoded_token.get("sub")
+    user_id = decoded_token.get(decoded_token_user_key)
     if user_id is None:
         raise HTTPException(status_code=400, detail="User not found in token")
     return user_id
@@ -117,7 +118,7 @@ def get_feature_lineage(feature: str, response: Response, requestor: User = Depe
 
 
 @router.post("/projects", name="Create new project with definition [Auth Required]")
-def new_project(definition: dict, response: Response, requestor: User = Depends(get_user)) -> dict:
+def new_project(definition: dict, response: Response, operator_id: str = Depends(get_current_user)) -> dict:
     rbac.init_userrole(requestor.username, definition["name"])
     response.status_code, res = check(requests.post(url=f"{registry_url}/projects", json=definition,
                                                     headers=get_api_header(requestor.username)))
@@ -194,7 +195,7 @@ def register_user(user: RegisterUser):
     return ResponseWrapper(iam.signup(user))
 
 
-@router.post("/okta/login", name="Akta login")
+@router.post("/okta/login", name="Okta login")
 def register_user(okta_login: OktaLogin):
     return ResponseWrapper(iam.okta_login(okta_login.code, okta_login.redirect_uri))
 
@@ -211,7 +212,7 @@ def reset_password(user_reset_password: UserResetPassword):
     return ResponseWrapper(True)
 
 
-@router.post("/users/email/check", name="Check Email if exists")
+@router.post("/users/email/check", name="Check if email exists")
 def register_user(email: str):
     return ResponseWrapper(iam.get_user_by_email(email))
 
