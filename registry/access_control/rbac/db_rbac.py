@@ -20,7 +20,7 @@ class DbRBAC(RBAC):
         self.conn = connect()
         # TODO: The sandbox startup will result in an error, comments this first.
         # after development is complete, rbac module needs to be removed.
-        # self.get_userroles()
+        self.get_userroles()
         self.projects_ids = {}
 
     def get_userroles(self):

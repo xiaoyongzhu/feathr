@@ -59,6 +59,7 @@ COPY --chown=1000:100 ./docs/samples/local_quickstart_notebook.ipynb .
 COPY --chown=1000:100 ./feathr-sandbox/feathr_init_script.py .
 
 # Run the script so that maven cache can be added for better experience. Otherwise users might have to wait for some time for the maven cache to be ready.
+# TODO: After development is complete, this comment needs to be removed. (feathr_init_script.py & interpret)
 # RUN python feathr_init_script.py
 # RUN python -m pip install interpret
 
