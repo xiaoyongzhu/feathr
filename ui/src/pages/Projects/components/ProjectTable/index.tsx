@@ -77,9 +77,10 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
   } = useQuery<Project[]>(
     ['Projects', project],
     async () => {
-      const reuslt = await fetchProjects()
-
-      return reuslt.reduce((list, item: string) => {
+      const result = await fetchProjects()
+      // @ts-ignore
+      // TODO: need to process this issue
+      return result['data'].reduce((list, item: string) => {
         const text = project?.trim().toLocaleLowerCase()
         if (!text || item.includes(text)) {
           list.push({ name: item })

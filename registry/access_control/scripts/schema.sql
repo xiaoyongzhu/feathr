@@ -71,6 +71,7 @@ CREATE TABLE organization_user (
 
 CREATE TABLE project_user (
   id VARCHAR(50) NOT NULL,
+  organization_id VARCHAR(50) NOT NULL,
   project_id VARCHAR(50) NOT NULL,
   user_id VARCHAR(50) NOT NULL,
   role VARCHAR(50) NOT NULL,

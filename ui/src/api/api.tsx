@@ -93,9 +93,10 @@ export const fetchDataSource = async (project: string, dataSourceId: string) => 
 }
 
 export const fetchProjects = async () => {
+  const organizationId = localStorage.getItem('organization_id')
   const axios = await authAxios(msalInstance)
   return axios
-    .get<[]>(`${getApiBaseUrl()}/projects`, {
+    .get<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/projects`, {
       headers: {}
     })
     .then((response) => {

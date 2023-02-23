@@ -3,6 +3,8 @@ from typing import Optional
 
 import jwt
 from fastapi import APIRouter, Depends, Response, Header, Query
+from pydantic import BaseModel
+
 from rbac import config
 from rbac.access import *
 from rbac.db_rbac import DbRBAC
@@ -10,8 +12,7 @@ from rbac.models import User
 
 from iam.orm_iam import OrmIAM, SECRET_KEY, ALGORITHM
 from iam.models import AddOrganization, RegisterUser, UserLogin, CaptchaType, UserResetPassword, OktaLogin, \
-    OrganizationUserEdit
-from iam.models import UserRole
+    OrganizationUserEdit, EditProjectUsers, UserRole
 
 iam = OrmIAM()
 
@@ -21,11 +22,10 @@ registry_url = config.RBAC_REGISTRY_URL
 decoded_token_user_key = "sub"
 
 
-class ResponseWrapper:
-    def __init__(self, data, status='SUCCESS', message='Success'):
-        self.status = status
-        self.data = data
-        self.message = message
+class ResponseWrapper(BaseModel):
+    data: Union[list[dict], dict, list[str]]
+    status: str = 'SUCCESS'
+    message: str = 'Success'
 
 
 def get_current_user(x_token: str = Header(None)):
@@ -42,17 +42,36 @@ def get_current_user(x_token: str = Header(None)):
     return user_id
 
 
-@router.get('/projects', name="Get a list of Project Names [No Auth Required]")
-async def get_projects(response: Response) -> list[str]:
+
+@router.post("/organizations/{organization_id}/projects/{project_id}", name="Edit users of project")
+def new_project(organization_id: str, project_id: str,
+                edit_project_user: EditProjectUsers,
+                operator_id: str = Depends(get_current_user)) -> dict:
+    iam.edit_project_users(organization_id, project_id, edit_project_user, operator_id)
+    return True
+
+
+@router.get('/organizations/{organization_id}/projects', name="Get a list of Project Names [No Auth Required]")
+async def get_projects(response: Response, organization_id: str,
+                       operator_id: str = Depends(get_current_user)):
+    """If the user is an administrator, retrieve all data directly. If the user is a user and has no projects,
+    return empty array"""
+    project_ids = iam.get_user_projects(organization_id, operator_id)
+    if len(project_ids) == 0:
+        return ResponseWrapper(data=[])
     response.status_code, res = check(
-        requests.get(url=f"{registry_url}/projects"))
-    return res
+        requests.get(url=f"{registry_url}/projects", params={'ids': project_ids}))
+    iam.supply_projects_users(organization_id, res)
+    result = ResponseWrapper(data=res)
+    return result
 
 
-@router.get('/projects/{project}', name="Get My Project [Read Access Required]")
-async def get_project(project: str, response: Response, access: UserAccess = Depends(project_read_access)):
-    response.status_code, res = check(requests.get(url=f"{registry_url}/projects/{project}",
-                                                   headers=get_api_header(access.user_name)))
+@router.get('/organizations/{organization_id}/projects/{project}', name="Get My Project [Read Access Required]")
+async def get_project(organization_id: str, project: str, response: Response,
+                      operator_id: str = Depends(get_current_user)):
+    iam.check_organization_user_access(organization_id, operator_id)
+
+    response.status_code, res = check(requests.get(url=f"{registry_url}/projects/{project}"))
     return res
 
 
@@ -119,9 +138,10 @@ def get_feature_lineage(feature: str, response: Response, requestor: User = Depe
 
 @router.post("/projects", name="Create new project with definition [Auth Required]")
 def new_project(definition: dict, response: Response, operator_id: str = Depends(get_current_user)) -> dict:
-    rbac.init_userrole(requestor.username, definition["name"])
-    response.status_code, res = check(requests.post(url=f"{registry_url}/projects", json=definition,
-                                                    headers=get_api_header(requestor.username)))
+    response.status_code, res = check(requests.post(url=f"{registry_url}/projects", json=definition))
+    organization_id = ''
+    if response.status_code == 200:
+        iam.add_project_user(organization_id, operator_id, res['guid'], UserRole.ADMIN)
     return res
 
 

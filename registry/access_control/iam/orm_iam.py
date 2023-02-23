@@ -6,8 +6,9 @@ import datetime
 import random
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from itertools import groupby
 
-from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey, StaticPool
+from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey, StaticPool, distinct
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from uuid import uuid4
@@ -17,7 +18,7 @@ import smtplib
 
 from iam.interface import IAM
 from iam.models import RegisterUser, AddOrganization, OrganizationUserEdit, UserRole, UserStatus, CaptchaType, \
-    CaptchaStatus, SsoUserPlatform
+    CaptchaStatus, SsoUserPlatform, EditProjectUsers
 
 from iam.exceptions import LoginError, ConflictError, EntityNotFoundError, AccessDeniedError
 from iam import okta
@@ -98,11 +99,23 @@ OrganizationEntity.users = relationship("OrganizationUserRelation", back_populat
 UserEntity.organizations = relationship("OrganizationUserRelation", back_populates="user")
 
 
+class ProjectUserRelation(Base):
+    """User and Project relationship table"""
+    __tablename__ = "project_user"
+
+    id = Column('id', String, primary_key=True)
+    organization_id = Column(String, ForeignKey('organizations.id'), nullable=False)
+    user_id = Column(String, ForeignKey('users.id'), nullable=False)
+    project_id = Column('project_id', String(50), nullable=False)
+    role = Column('role', String(50), nullable=False)
+    create_time = Column('create_time', DateTime, default=datetime.datetime.utcnow)
+
 
 class OrmIAM(IAM):
     def __init__(self):
         if os.environ.get(FEATHR_SANDBOX):
-            self.engine = create_engine('sqlite:////tmp/feathr_iam.sqlite?check_same_thread=False', connect_args={'check_same_thread': False},
+            self.engine = create_engine('sqlite:////tmp/feathr_iam.sqlite?check_same_thread=False',
+                                        connect_args={'check_same_thread': False},
                                         poolclass=StaticPool)
         else:
             conn_str = os.environ['RBAC_CONNECTION_STR']
@@ -151,7 +164,7 @@ class OrmIAM(IAM):
     def delete_organization(self, organization_id: str, operator_id: str):
         """Logical deletion"""
         session = self.Session()
-        self.__check_organization_access(session, organization_id, operator_id)
+        self.__check_organization_manager_access(session, organization_id, operator_id)
 
         organization = session.query(OrganizationEntity).get(organization_id)
         organization.status = 'DELETED'
@@ -187,7 +200,7 @@ class OrmIAM(IAM):
         msg['To'] = email
         msg['Subject'] = type.value
         body = f'Type: {type.value}, Verification Code: {code}'
-        # 添加邮件正文
+        # Add content
         msg.attach(MIMEText(body, 'plain'))
         smtp_obj.sendmail(self.smtp_sender, [email], msg.as_string())
         smtp_obj.close()
@@ -273,7 +286,7 @@ class OrmIAM(IAM):
         user = self.__get_existing_user(session, email)
 
         # Check whether have access
-        self.__check_organization_access(session, organization_id, operator_id)
+        self.__check_organization_manager_access(session, organization_id, operator_id)
         # Check if this user is already belonging to this organization
         organization_users = session.query(OrganizationUserRelation) \
             .filter_by(organization_id=organization_id, user_id=user.id).first()
@@ -291,7 +304,8 @@ class OrmIAM(IAM):
         session = self.Session()
 
         # Check whether have access
-        self.__check_organization_access(session, organization_id, operator_id)
+        self.__check_organization_manager_access(session, organization_id, operator_id)
+
         organization_user_relation = session.query(OrganizationUserRelation) \
             .filter(OrganizationUserRelation.organization_id == organization_id,
                     OrganizationUserRelation.user_id == user_id).first()
@@ -307,7 +321,7 @@ class OrmIAM(IAM):
         session = self.Session()
 
         # Check whether have access
-        self.__check_organization_access(session, organization_id, operator_id)
+        self.__check_organization_manager_access(session, organization_id, operator_id)
 
         session.query(OrganizationUserRelation) \
             .filter(OrganizationUserRelation.organization_id == organization_id,
@@ -321,7 +335,7 @@ class OrmIAM(IAM):
         """User search with support for keyword and pagination"""
         session = self.Session()
 
-        self.__check_organization_access(session, organization_id, operator_id)
+        self.__check_organization_manager_access(session, organization_id, operator_id)
 
         users = []
         filters = [OrganizationUserRelation.organization_id == organization_id]
@@ -350,6 +364,98 @@ class OrmIAM(IAM):
         session.close()
         return exist_user
 
+    def get_email_sender(self):
+        # init email server
+        smtp_obj = smtplib.SMTP(os.environ['EMAIL_SENDER_HOST'], os.environ['EMAIL_SENDER_PORT'])
+        smtp_obj.starttls()
+        # Login to email server
+        smtp_obj.login(os.environ['EMAIL_SENDER_ADDRESS'], os.environ['EMAIL_SENDER_PASSWORD'])
+        return smtp_obj
+
+    def supply_projects_users(self, organization_id: str, projects: list[dict]):
+        """Supply projects managers and users"""
+        if projects is None or len(projects) == 0:
+            return
+        session = self.Session()
+        project_ids = list(map(lambda obj: obj['entity_id'], projects))
+        relations = session.query(ProjectUserRelation) \
+            .filter(ProjectUserRelation.organization_id == organization_id,
+                    ProjectUserRelation.project_id.in_(project_ids)).all()
+        relation_group = groupby(relations, key=lambda x: x['project_id'])
+        for project in projects:
+            relations = relation_group[project['entity_id']]
+            project['manages'] = []
+            project['users'] = []
+            for relation in relations:
+                if relation.role == UserRole.ADMIN:
+                    project['manages'].append({'id': relation.user_id, 'name': ''})
+                elif relation.role == UserRole.USER:
+                    project['users'].append({'id': relation.user_id, 'name': ''})
+
+    def edit_project_users(self, organization_id: str, project_id: str,
+                           edit_project_user: EditProjectUsers, user_id: str):
+        """Edit project users, will check authority first
+        will remove all relations and init new relations"""
+        session = self.Session()
+
+        self.__check_organization_user_access(session, organization_id, user_id)
+        self.__check_project_manager(session, project_id, user_id)
+
+        session.query(ProjectUserRelation) \
+            .filter(ProjectUserRelation.organization_id == organization_id,
+                    ProjectUserRelation.project_id == project_id) \
+            .delete(synchronize_session='fetch')
+
+        for manager in edit_project_user.managers:
+            session.add(ProjectUserRelation(id=self.__get_uuid(), organization_id=organization_id,
+                                            user_id=manager, project_id=project_id,
+                                            role=UserRole.ADMIN.value))
+
+        for user in edit_project_user.users:
+            session.add(ProjectUserRelation(id=self.__get_uuid(), organization_id=organization_id,
+                                            user_id=user, project_id=project_id,
+                                            role=UserRole.USER.value))
+
+        session.commit()
+        session.close()
+        return True
+
+    def get_user_projects(self, organization_id: str, user_id: str):
+        session = self.Session()
+        user_role = self.__get_user_role(session, organization_id, user_id)
+        if user_role == UserRole.ADMIN.value:
+            project_ids = session.query(distinct(ProjectUserRelation.project_id)) \
+                .filter_by(organization_id=organization_id).all()
+        else:
+            """Get all project ids which user has authority"""
+            project_ids = session.query(distinct(ProjectUserRelation.project_id)) \
+                .filter_by(organization_id=organization_id,
+                           user_id=user_id).all()
+        return project_ids
+
+    def add_project_user(self, organization_id: str, user_id: str, project_id: str, role: UserRole):
+        """Add user to the project"""
+        session = self.Session()
+        # Check if user exists
+        self.__check_organization_user_access(session, organization_id, user_id)
+
+        # If the relation already exists, will return directly
+        exist_relation = session.query(ProjectUserRelation) \
+            .filter_by(organization_id=organization_id,
+                       user_id=user_id,
+                       project_id=project_id).first()
+        if exist_relation is not None:
+            return
+
+        session.add(ProjectUserRelation(id=self.__get_uuid(),
+                                        organization_id=organization_id,
+                                        user_id=user_id,
+                                        project_id=project_id,
+                                        role=role))
+
+        session.commit()
+        session.close()
+
     def __login_result(self, session, user: UserEntity):
         """Get organizations, retrieving the result by joining the organization table and the organization_user table
         Now, a user only returns one organization"""
@@ -370,14 +476,6 @@ class OrmIAM(IAM):
             }, SECRET_KEY, algorithm=ALGORITHM)
         }
 
-    def get_email_sender(self):
-        # init email server
-        smtp_obj = smtplib.SMTP(os.environ['EMAIL_SENDER_HOST'], os.environ['EMAIL_SENDER_PORT'])
-        smtp_obj.starttls()
-        # Login to email server
-        smtp_obj.login(os.environ['EMAIL_SENDER_ADDRESS'], os.environ['EMAIL_SENDER_PASSWORD'])
-        return smtp_obj
-
     def __verify_code(self, session, receiver: str, type: CaptchaType, captcha: str):
         """Check whether the captcha is correct"""
         latest_captcha = session.query(CaptchaEntity) \
@@ -390,8 +488,8 @@ class OrmIAM(IAM):
         else:
             latest_captcha.status = CaptchaStatus.VERIFIED.value
 
-    def __check_organization_access(self, session, organization_id: str, operator_id: str):
-        """Check if the user has the authority to operate on this organization,
+    def __check_organization_manager_access(self, session, organization_id: str, operator_id: str):
+        """Check if the user has the authority to manager on this organization,
         and if the user or organization does not exist, it will also return Access Denied """
 
         relation = session.query(OrganizationUserRelation) \
@@ -399,6 +497,41 @@ class OrmIAM(IAM):
                     OrganizationUserRelation.user_id == operator_id).first()
         if relation is None or relation.role != UserRole.ADMIN.value:
             raise AccessDeniedError('Access Denied!')
+
+    def check_organization_user_access(self, organization_id: str, operator_id: str):
+        session = self.Session()
+        self.check_organization_user_access(organization_id, operator_id)
+        session.commit()
+        session.close()
+
+    def __check_organization_user_access(self, session, organization_id: str, operator_id: str):
+        """Check if the user has the authority to operate on this organization,
+        and if the user or organization does not exist, it will also return Access Denied """
+
+        relation = session.query(OrganizationUserRelation) \
+            .filter(OrganizationUserRelation.organization_id == organization_id,
+                    OrganizationUserRelation.user_id == operator_id).first()
+        if relation is None:
+            raise AccessDeniedError('Access Denied!')
+
+    def __check_project_manager(self, session, organization_id: str, project_id: str, user_id: str):
+        """Organization Manager should not call this function,
+        will check if user has this project and is a project manager"""
+        relation = session.query(ProjectUserRelation) \
+            .filter_by(organization_id=organization_id,
+                       project_id=project_id,
+                       user_id=user_id).first()
+        if relation is None or relation.role == UserRole.USER:
+            raise AccessDeniedError('Access Denied!')
+
+    def __get_user_role(self, session, organization_id: str, user_Id: str):
+        relation = session.query(OrganizationUserRelation) \
+            .filter(OrganizationUserRelation.organization_id == organization_id,
+                    OrganizationUserRelation.user_id == user_Id).first()
+        if relation is None:
+            return UserRole.USER.value
+        else:
+            return relation.role
 
     def __check_email_exists(self, session, email: str):
         """ if email already exists, will raise a error """

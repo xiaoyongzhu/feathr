@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List
 
 from pydantic import BaseModel, constr
 
@@ -55,6 +56,11 @@ class UserResetPassword(BaseModel):
     email: constr(min_length=5)
     new_password: constr(min_length=5)
     captcha: constr(min_length=4)
+
+
+class EditProjectUsers(BaseModel):
+    managers: List[str]
+    users: List[str]
 
 
 class SsoUserPlatform(Enum):
