@@ -19,9 +19,11 @@ const ProjectsSelect = (props: ProjectsSelectProps) => {
     async () => {
       try {
         const result = await fetchProjects()
-        return result.map((item) => ({
-          value: item,
-          label: item
+        console.log(result)
+        // @ts-ignore
+        return result.data.map((item) => ({
+          value: item.entity_id,
+          label: item.qualified_name
         }))
       } catch (e) {
         return Promise.reject(e)

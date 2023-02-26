@@ -10,12 +10,12 @@ interfaces related to users, and interfaces related to operations between users 
 class IAM(ABC):
     @abstractmethod
     def add_organization(self, organization: AddOrganization):
-        """Add a organization"""
+        """Add an organization"""
         pass
 
     @abstractmethod
     def delete_organization(self, organization_id: str, operator_id: str):
-        """Delete a organization"""
+        """Delete an organization"""
         pass
 
     @abstractmethod

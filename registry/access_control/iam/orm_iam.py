@@ -372,7 +372,7 @@ class OrmIAM(IAM):
         smtp_obj.login(os.environ['EMAIL_SENDER_ADDRESS'], os.environ['EMAIL_SENDER_PASSWORD'])
         return smtp_obj
 
-    def supply_projects_users(self, organization_id: str, projects: list[dict]):
+    def get_projects_users(self, organization_id: str, projects: list[dict]):
         """Supply projects managers and users"""
         if projects is None or len(projects) == 0:
             return
@@ -381,16 +381,16 @@ class OrmIAM(IAM):
         relations = session.query(ProjectUserRelation) \
             .filter(ProjectUserRelation.organization_id == organization_id,
                     ProjectUserRelation.project_id.in_(project_ids)).all()
-        relation_group = groupby(relations, key=lambda x: x['project_id'])
-        for project in projects:
-            relations = relation_group[project['entity_id']]
-            project['manages'] = []
-            project['users'] = []
-            for relation in relations:
-                if relation.role == UserRole.ADMIN:
-                    project['manages'].append({'id': relation.user_id, 'name': ''})
-                elif relation.role == UserRole.USER:
-                    project['users'].append({'id': relation.user_id, 'name': ''})
+        # relation_group = groupby(relations, key=lambda x: x['project_id'])
+        # for project in projects:
+        #     relations = relation_group[project['entity_id']]
+        #     project['manages'] = []
+        #     project['users'] = []
+        #     for relation in relations:
+        #         if relation.role == UserRole.ADMIN:
+        #             project['manages'].append({'id': relation.user_id, 'name': ''})
+        #         elif relation.role == UserRole.USER:
+        #             project['users'].append({'id': relation.user_id, 'name': ''})
 
     def edit_project_users(self, organization_id: str, project_id: str,
                            edit_project_user: EditProjectUsers, user_id: str):

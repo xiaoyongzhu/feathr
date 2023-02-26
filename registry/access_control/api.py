@@ -1,4 +1,3 @@
-import json
 from typing import Optional
 
 import jwt
@@ -29,7 +28,7 @@ class ResponseWrapper(BaseModel):
 
 
 def get_current_user(x_token: str = Header(None)):
-    if x_token is None:
+    if not x_token:
         raise HTTPException(status_code=400, detail="X-Token header is missing")
     try:
         decoded_token = jwt.decode(x_token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -37,7 +36,7 @@ def get_current_user(x_token: str = Header(None)):
         print(jwt.PyJWTError)
         raise HTTPException(status_code=400, detail="Invalid token")
     user_id = decoded_token.get(decoded_token_user_key)
-    if user_id is None:
+    if not user_id:
         raise HTTPException(status_code=400, detail="User not found in token")
     return user_id
 
@@ -61,7 +60,7 @@ async def get_projects(response: Response, organization_id: str,
         return ResponseWrapper(data=[])
     response.status_code, res = check(
         requests.get(url=f"{registry_url}/projects", params={'ids': project_ids}))
-    iam.supply_projects_users(organization_id, res)
+    iam.get_projects_users(organization_id, res)
     result = ResponseWrapper(data=res)
     return result
 
@@ -76,7 +75,7 @@ async def get_project(organization_id: str, project: str, response: Response,
 
 
 @router.get("/dependent/{entity}", name="Get downstream/dependent entitites for a given entity [Read Access Required]")
-def get_dependent_entities(entity: str, access: UserAccess = Depends(project_read_access)):
+def get_dependent_entities(entity: str, operator_id: str = Depends(get_current_user)):
     response = requests.get(url=f"{registry_url}/dependent/{entity}",
                             headers=get_api_header(access.user_name)).content.decode('utf-8')
     return json.loads(response)
@@ -207,39 +206,39 @@ def delete_userrole(user: str, role: str, reason: str, access: UserAccess = Depe
 def send_captcha(email: str, type: CaptchaType = Query(..., title='type',
                                                        enum=CaptchaType.__members__.values())):
     iam.send_captcha(email, type)
-    return ResponseWrapper(True)
+    return ResponseWrapper(data=True)
 
 
 @router.post("/signup", name="Register a new User")
 def register_user(user: RegisterUser):
-    return ResponseWrapper(iam.signup(user))
+    return ResponseWrapper(data=iam.signup(user))
 
 
 @router.post("/okta/login", name="Okta login")
 def register_user(okta_login: OktaLogin):
-    return ResponseWrapper(iam.okta_login(okta_login.code, okta_login.redirect_uri))
+    return ResponseWrapper(data=iam.okta_login(okta_login.code, okta_login.redirect_uri))
 
 
 @router.post("/login", name="User login")
 def register_user(user_login: UserLogin):
-    return ResponseWrapper(iam.login(user_login.email, user_login.password))
+    return ResponseWrapper(data=iam.login(user_login.email, user_login.password))
 
 
 @router.post("/reset-password", name="Reset Password")
 def reset_password(user_reset_password: UserResetPassword):
     iam.reset_password(user_reset_password.email, user_reset_password.new_password,
                        user_reset_password.captcha)
-    return ResponseWrapper(True)
+    return ResponseWrapper(data=True)
 
 
 @router.post("/users/email/check", name="Check if email exists")
 def register_user(email: str):
-    return ResponseWrapper(iam.get_user_by_email(email))
+    return ResponseWrapper(data=iam.get_user_by_email(email))
 
 
 @router.post("/organizations", name="Add a new Organization")
 def add_organization(organization: AddOrganization):
-    return ResponseWrapper(iam.add_organization(organization))
+    return ResponseWrapper(data=iam.add_organization(organization))
 
 
 @router.post("/organizations/{organization_id}/invite", name="Invite a User")
@@ -247,32 +246,32 @@ def invite_user(organization_id: str, email: str,
                 role: UserRole = Query(..., title='role',
                                        enum=UserRole.__members__.values()),
                 operator_id: str = Depends(get_current_user)):
-    return ResponseWrapper(iam.invite_user(organization_id, email, role, operator_id))
+    return ResponseWrapper(data=iam.invite_user(organization_id, email, role, operator_id))
 
 
 @router.get("/organizations/{organization_id}/users", name="Get all users of organization")
-def add_organization(organization_id: str, keyword: str = None,
-                     page_size: int = 20, page_no: int = 1,
-                     operator_id: str = Depends(get_current_user)):
-    return ResponseWrapper(iam.get_users(organization_id, keyword, operator_id, page_size, page_no))
+def get_organization_users(organization_id: str, keyword: str = None,
+                           page_size: int = 20, page_no: int = 1,
+                           operator_id: str = Depends(get_current_user)):
+    return ResponseWrapper(data=iam.get_users(organization_id, keyword, operator_id, page_size, page_no))
 
 
 @router.post("/organizations/{organization_id}/users/{user_id}", name="Edit user from organization")
-def delete_organization_user(organization_id: str, user_id: str, edit_user: OrganizationUserEdit,
+def edit_organization_user(organization_id: str, user_id: str, edit_user: OrganizationUserEdit,
                              operator_id: str = Depends(get_current_user)):
     iam.edit_organization_user(organization_id, user_id, edit_user, operator_id)
-    return ResponseWrapper(True)
+    return ResponseWrapper(data=True)
 
 
 @router.delete("/organizations/{organization_id}/users/{user_id}", name="Remove user from organization")
 def delete_organization_user(organization_id: str, user_id: str, operator_id: str = Depends(get_current_user)):
     iam.remove_organization_user(organization_id, user_id, operator_id)
-    return ResponseWrapper(True)
+    return ResponseWrapper(data=True)
 
 
-@router.delete("/organizations/{organization_id}", name="Delete a organization")
+@router.delete("/organizations/{organization_id}", name="Delete an organization")
 def delete_organization(organization_id: str, operator_id: str = Depends(get_current_user)):
-    return ResponseWrapper(iam.delete_organization(organization_id, operator_id))
+    return ResponseWrapper(data=iam.delete_organization(organization_id, operator_id))
 
 
 def check(r):

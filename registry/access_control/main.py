@@ -4,7 +4,7 @@ import uvicorn
 import os
 import traceback
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from flask import Request
 from starlette.middleware.cors import CORSMiddleware
@@ -13,7 +13,7 @@ from starlette.responses import JSONResponse
 from iam.exceptions import LoginError, ConflictError, EntityNotFoundError, AccessDeniedError
 from rbac import config
 from api import router as api_router
-
+from iam.config import REGISTRY_DEBUGGING
 
 from typing import Dict
 
@@ -42,20 +42,15 @@ def get_application() -> FastAPI:
 app = get_application()
 
 
-def exc_to_content(e: Exception) -> Dict:
-    """ In scenarios where the user parameter cannot pass, the error will be displayed on the page """
-    content = {"status": "FAILED", "message": str(e)}
-    if os.environ.get("REGISTRY_DEBUGGING"):
-        content["traceback"] = "".join(traceback.TracebackException.from_exception(e).format())
-    return content
-
-
-def exc_to_parameter_error_content(e: Exception) -> Dict:
-    """ In scenarios where there is an error with the parameters being transmitted from the front-end,
-    the error should not be display to the user """
-    print(e)
-    content = {"status": "PARAMETER_ERROR", "message": str(e)}
-    if os.environ.get("REGISTRY_DEBUGGING"):
+def exc_to_content(e: Exception, parameter_error: bool = False) -> Dict:
+    """ In scenarios where the user parameter cannot pass
+     parameter_error:False the error will be displayed on the page
+     parameter_error:True the error should not be display to the user"""
+    if parameter_error:
+        content = {"status": "FAILED", "message": str(e)}
+    else:
+        content = {"status": "PARAMETER_ERROR", "message": str(e)}
+    if os.environ.get(REGISTRY_DEBUGGING):
         content["traceback"] = "".join(traceback.TracebackException.from_exception(e).format())
     return content
 

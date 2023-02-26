@@ -12,7 +12,10 @@ const App: React.FC = () => {
       if (data.status === 'SUCCESS') {
         data = data.data
         if (data.organizations.length === 0) {
-          // todo: This user does not have any organizations, need redirect no organization page!
+          message.success(
+            'No organizations exist. Please join an organization before logging in.'
+          )
+          window.location.href = '/guide'
           return
         }
         message.success('Login Success')

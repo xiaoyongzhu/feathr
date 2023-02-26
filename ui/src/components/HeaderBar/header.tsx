@@ -8,15 +8,14 @@ import HeaderWidget from './headerWidget'
 import styles from './index.module.less'
 
 const Header = () => {
-  const { accounts } = useMsal()
-  const account = useAccount(accounts[0] || {})
-  const userName = window.localStorage.getItem('user_name')
+  const userName = window.localStorage.getItem('user_name') as string
+  console.log(userName)
   return (
     <>
       <Layout.Header className={styles.header}>
         <span></span>
         <span className={styles.right}>
-          <HeaderWidget username={account?.username || userName || 'test 99999'} />
+          <HeaderWidget username={userName} />
         </span>
       </Layout.Header>
       <div className={styles.vacancy} />

@@ -77,16 +77,23 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
   } = useQuery<Project[]>(
     ['Projects', project],
     async () => {
-      const result = await fetchProjects()
-      // @ts-ignore
-      // TODO: need to process this issue
-      return result['data'].reduce((list, item: string) => {
-        const text = project?.trim().toLocaleLowerCase()
-        if (!text || item.includes(text)) {
-          list.push({ name: item })
-        }
-        return list
+      const fetchData = await fetchProjects()
+      const result = fetchData.data
+      result.reduce((list: any, item: {
+        name: string;
+        qualified_name: string;
+        entity_id: string
+      }) => {
+        item.name = item.qualified_name
       }, [] as Project[])
+      return result
+      // return result.data.reduce((list, item) => {
+      //   const text = project?.trim().toLocaleLowerCase()
+      //   if (!text || item.includes(text)) {
+      //     list.push({ name: item.qualified_name })
+      //   }
+      //   return list
+      // }, [] as Project[])
     },
     {
       retry: false,
