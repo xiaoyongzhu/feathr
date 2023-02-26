@@ -8,12 +8,12 @@ on:
       - "ui/**"
       - "**/README.md"
 
-  pull_request:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "ui/**"
-      - "**/README.md"
+  # pull_request:
+  #   branches: [main]
+  #   paths-ignore:
+  #     - "docs/**"
+  #     - "ui/**"
+  #     - "**/README.md"
 
   pull_request_target:
     branches: [main]
@@ -26,6 +26,12 @@ on:
   schedule:
     # Runs daily at 1 PM UTC (9 PM CST), will send notification to TEAMS_WEBHOOK
     - cron: '00 13 * * *'
+
+# Cancel any in progress workflow from the same PR, branch or tag when a new workflow is triggered
+# Ref: https://stackoverflow.com/questions/66335225/how-to-cancel-previous-runs-in-the-pr-when-you-push-new-commitsupdate-the-curre
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   gradle_test:
@@ -129,6 +135,7 @@ jobs:
         run: |
           # run only test with databricks. run in 6 parallel jobs
           pytest -n 6 --cov-report term-missing --cov=feathr_project/feathr feathr_project/test --cov-config=.github/workflows/.coveragerc_db
+     
   azure_synapse_test:
     # might be a bit duplication to setup both the azure_synapse test and databricks test, but for now we will keep those to accelerate the test speed
     runs-on: ubuntu-latest
@@ -257,7 +264,7 @@ jobs:
         run: |
           # skip cloud related tests
           pytest --cov-report term-missing --cov=feathr_project/feathr/spark_provider feathr_project/test/test_local_spark_e2e.py --cov-config=.github/workflows/.coveragerc_local
-  
+
   registry_test:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'registry test'))
@@ -290,10 +297,25 @@ jobs:
         run: |
           pytest --cov-report term-missing --cov=registry/sql-registry/registry --cov-config=registry/test/.coveragerc registry/test/test_sql_registry.py
           pytest --cov-report term-missing --cov=registry/purview-registry/registry --cov-config=registry/test/.coveragerc registry/test/test_purview_registry.py
-
+      
+  test_status:
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'pull_request_target'
+    needs: [gradle_test, python_lint, databricks_test, azure_synapse_test, local_spark_test, registry_test]
+    steps:
+      - name: Test status failure
+        if: contains(needs.*.result, 'failure')
+        run: |
+          echo "Merging is blocked because one or more test jobs failed."
+          exit 1
+      - name: Test status success
+        if: ${{ !contains(needs.*.result, 'failure') }}
+        run: |
+          echo "All required CI test jobs passed."
+       
   failure_notification:
     # If any failure, warning message will be sent
-    needs: [gradle_test, python_lint, databricks_test, azure_synapse_test, local_spark_test]
+    needs: [gradle_test, python_lint, databricks_test, azure_synapse_test, local_spark_test, registry_test]
     runs-on: ubuntu-latest
     if: failure() && github.event_name == 'schedule'
     steps:
@@ -303,7 +325,7 @@ jobs:
 
   notification:
     # Final Daily Report with all job status
-    needs: [gradle_test, python_lint, databricks_test, azure_synapse_test, local_spark_test]
+    needs: [gradle_test, python_lint, databricks_test, azure_synapse_test, local_spark_test, registry_test]
     runs-on: ubuntu-latest
     if: always() && github.event_name == 'schedule'
     steps:

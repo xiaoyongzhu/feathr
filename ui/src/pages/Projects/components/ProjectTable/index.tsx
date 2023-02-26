@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { fetchProjects, deleteEntity } from '@/api'
 import ResizeTable, { ResizeColumnType } from '@/components/ResizeTable'
+import { useStore } from '@/hooks'
 import { Project } from '@/models/model'
 
 export interface ProjectTableProps {
@@ -14,7 +15,8 @@ export interface ProjectTableProps {
 }
 const ProjectTable = (props: ProjectTableProps, ref: any) => {
   const navigate = useNavigate()
-
+  const { globalStore } = useStore()
+  const { setProjectList } = globalStore
   const { project } = props
 
   const columns: ResizeColumnType<Project>[] = [
@@ -37,7 +39,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
               ghost
               type="primary"
               onClick={() => {
-                navigate(`/features?project=${name}`)
+                navigate(`/${name}/features`)
               }}
             >
               View Features
@@ -46,7 +48,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
               ghost
               type="primary"
               onClick={() => {
-                navigate(`/projects/${name}/lineage`)
+                navigate(`/${name}/lineage`)
               }}
             >
               View Lineage
@@ -87,13 +89,6 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
         item.name = item.qualified_name
       }, [] as Project[])
       return result
-      // return result.data.reduce((list, item) => {
-      //   const text = project?.trim().toLocaleLowerCase()
-      //   if (!text || item.includes(text)) {
-      //     list.push({ name: item.qualified_name })
-      //   }
-      //   return list
-      // }, [] as Project[])
     },
     {
       retry: false,
@@ -105,6 +100,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
     try {
       await deleteEntity(entity)
       message.success('The project is deleted successfully.')
+
       refetch()
     } catch (e: any) {
       notification.error({

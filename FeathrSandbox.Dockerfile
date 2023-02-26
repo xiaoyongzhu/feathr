@@ -10,6 +10,10 @@ RUN echo 'REACT_APP_API_ENDPOINT=http://localhost:8000' >> .env.production \
     && echo 'REACT_APP_OKTA_CALLBACK_URI=http://localhost:8081/okta-login/callback' >> .env.production
 RUN npm install && npm run build
 
+FROM gradle:7.6.0-jdk8 as gradle-build
+WORKDIR /usr/src/feathr
+COPY . .
+RUN ./gradlew build
 
 FROM jupyter/pyspark-notebook
 
@@ -29,6 +33,7 @@ COPY ./deploy/nginx.conf /etc/nginx/nginx.conf
 # always install feathr from main
 WORKDIR /home/jovyan/work
 COPY --chown=1000:100 ./feathr_project ./feathr_project
+COPY --chown=1000:100 --from=gradle-build /usr/src/feathr/build/libs .
 RUN python -m pip install  -e ./feathr_project
 
 
@@ -59,7 +64,6 @@ COPY --chown=1000:100 ./docs/samples/local_quickstart_notebook.ipynb .
 COPY --chown=1000:100 ./feathr-sandbox/feathr_init_script.py .
 
 # Run the script so that maven cache can be added for better experience. Otherwise users might have to wait for some time for the maven cache to be ready.
-RUN python feathr_init_script.py
 RUN python -m pip install interpret
 
 USER root
@@ -72,13 +76,21 @@ RUN sed -i "s/\r//g" /usr/src/registry/start_local.sh
 
 # install a Kafka single node instance
 # Reference: https://www.looklinux.com/how-to-install-apache-kafka-single-node-on-ubuntu/
-RUN wget https://downloads.apache.org/kafka/3.3.1/kafka_2.12-3.3.1.tgz && tar xzf kafka_2.12-3.3.1.tgz && mv kafka_2.12-3.3.1 /usr/local/kafka && rm kafka_2.12-3.3.1.tgz
+# RUN wget https://archive.apache.org/dist/kafka/3.3.1/kafka_2.12-3.3.1.tgz && tar xzf kafka_2.12-3.3.1.tgz && mv kafka_2.12-3.3.1 /usr/local/kafka && rm kafka_2.12-3.3.1.tgz
 
 # /usr/local/kafka/bin/zookeeper-server-start.sh /usr/local/kafka/config/zookeeper.properties
 # /usr/local/kafka/bin/kafka-server-start.sh  /usr/local/kafka/config/server.properties
 
 WORKDIR /home/jovyan/work
 
+USER jovyan
+
+ENV API_BASE="api/v1" 
+ENV FEATHR_SANDBOX=True
+# Run the script so that maven cache can be added for better experience. Otherwise users might have to wait for some time for the maven cache to be ready.
+RUN /usr/src/registry/start_local.sh -m build_docker && python feathr_init_script.py
+
+USER root
 
 # 80: Feathr UI
 # 8000: Feathr REST API

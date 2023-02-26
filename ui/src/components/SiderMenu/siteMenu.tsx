@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import {
   ControlOutlined,
@@ -6,17 +6,20 @@ import {
   DatabaseOutlined,
   EyeOutlined,
   HomeOutlined,
+  PartitionOutlined,
   ProjectOutlined,
   RocketOutlined,
   UserOutlined
 } from '@ant-design/icons'
-import { Layout, Menu, Typography } from 'antd'
-import { Link, useLocation } from 'react-router-dom'
+import { Layout, Menu, MenuProps, Typography } from 'antd'
+
+import { observer, useStore } from '@/hooks'
 
 import VersionBar from './VersionBar'
 
 import styles from './index.module.less'
 
+type MenuItems = MenuProps['items']
 export interface SiderMenuProps {
   collapsedWidth?: number
   siderWidth?: number
@@ -25,11 +28,19 @@ export interface SiderMenuProps {
 const { Title } = Typography
 const { Sider } = Layout
 
-const menuItems = [
+const enableRBAC = window.environment?.enableRBAC
+const showManagement = enableRBAC ? enableRBAC : process.env.REACT_APP_ENABLE_RBAC
+
+const defaultProps = {
+  collapsedWidth: 60,
+  siderWidth: 200
+}
+
+const menuItems: MenuItems = [
   {
-    key: '',
+    key: 'home',
     icon: <HomeOutlined style={{ fontSize: '20px', color: '#e28743' }} />,
-    label: <Link to="/">Home</Link>
+    label: 'Home'
   },
   {
     key: 'users',
@@ -39,62 +50,66 @@ const menuItems = [
   {
     key: 'projects',
     icon: <ProjectOutlined style={{ fontSize: '20px', color: '#177ddc' }} />,
-    label: <Link to="/projects">Projects</Link>
+    label: 'Projects'
+  },
+  {
+    key: 'lineage',
+    icon: <PartitionOutlined style={{ fontSize: '20px', color: '#b9038b' }} />,
+    label: 'Lineage'
   },
   {
     key: 'datasources',
     icon: <DatabaseOutlined style={{ fontSize: '20px', color: '#13a8a8' }} />,
-    label: <Link to="/dataSources">Data Sources</Link>
+    label: 'Data Sources'
   },
   {
     key: 'features',
     icon: <CopyOutlined style={{ fontSize: '20px', color: '#d89614' }} />,
-    label: <Link to="/features">Features</Link>
+    label: 'Features'
   },
   {
     key: 'jobs',
     icon: <RocketOutlined style={{ fontSize: '20px', color: '#642ab5' }} />,
-    label: <Link to="/jobs">Jobs</Link>
+    label: 'Jobs'
   },
   {
     key: 'monitoring',
     icon: <EyeOutlined style={{ fontSize: '20px', color: '#e84749' }} />,
-    label: <Link to="/monitoring">Monitoring</Link>
+    label: 'Monitoring'
   }
 ]
-
-const enableRBAC = window.environment?.enableRBAC
-const showManagement = enableRBAC ? enableRBAC : process.env.REACT_APP_ENABLE_RBAC
 
 if (showManagement === 'true') {
   menuItems.push({
     key: 'management',
     icon: <ControlOutlined style={{ fontSize: '20px', color: '#6495ed' }} />,
-    label: <Link to="/management">Management</Link>
+    label: 'Management'
   })
 }
 
-const getMenuKey = (pathname: string) => {
-  return pathname.split('/')[1].toLocaleLowerCase()
-}
-
-const defaultProps = {
-  collapsedWidth: 60,
-  siderWidth: 200
-}
+const paths = ['lineage', 'datasources', 'features', 'jobs', 'monitoring']
 
 const SideMenu = (props: SiderMenuProps) => {
-  const location = useLocation()
+  const { globalStore } = useStore()
+  const { project, menuKeys, navigate, setSwitchProjecModalOpen } = globalStore
 
   const { siderWidth, collapsedWidth } = { ...defaultProps, ...props }
 
   const [collapsed] = useState<boolean>(false)
 
-  const [current, setcurrent] = useState<string>(getMenuKey(location.pathname))
+  const onClickMenu: MenuProps['onClick'] = (e) => {
+    const { key } = e
 
-  useEffect(() => {
-    setcurrent(getMenuKey(location.pathname))
-  }, [location.pathname])
+    if (paths.includes(key)) {
+      if (project) {
+        navigate?.(`/${project}/${key}`)
+      } else {
+        setSwitchProjecModalOpen?.(true, key)
+      }
+    } else {
+      navigate?.(`/${key}`)
+    }
+  }
 
   return (
     <>
@@ -120,7 +135,13 @@ const SideMenu = (props: SiderMenuProps) => {
         >
           Feathr
         </Title>
-        <Menu theme="dark" mode="inline" selectedKeys={[current]} items={menuItems} />
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={menuKeys}
+          items={menuItems}
+          onClick={onClickMenu}
+        />
 
         <VersionBar className={styles.versionBar} />
       </Sider>
@@ -128,4 +149,4 @@ const SideMenu = (props: SiderMenuProps) => {
   )
 }
 
-export default SideMenu
+export default observer(SideMenu)

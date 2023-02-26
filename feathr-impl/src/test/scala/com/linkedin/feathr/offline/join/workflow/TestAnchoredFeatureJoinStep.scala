@@ -16,7 +16,7 @@ import org.testng.annotations.Test
 import org.testng.Assert._
 import org.mockito.Mockito._
 import org.mockito.ArgumentMatchers._
-import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 
 /**
  * Unit test class for [[AnchoredFeatureJoinStep]].
@@ -124,6 +124,7 @@ class TestAnchoredFeatureJoinStep extends TestFeathr with MockitoSugar {
   def testJoinOnSingleDFWhenSaltedJoin(): Unit = {
     val mockExecutionContext = mock[JoinExecutionContext] // mock execution context
     when(mockExecutionContext.frequentItemEstimatedDFMap).thenReturn(None)
+    when(mockExecutionContext.sparkSession).thenReturn(ss)
 
     // mock feature DF
     val mockTransformedResult = mock[TransformedResult]

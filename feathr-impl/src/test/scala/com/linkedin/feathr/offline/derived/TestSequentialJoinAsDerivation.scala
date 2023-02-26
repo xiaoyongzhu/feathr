@@ -12,20 +12,17 @@ import com.linkedin.feathr.offline.join.algorithms.{SeqJoinExplodedJoinKeyColumn
 import com.linkedin.feathr.offline.logical.FeatureGroups
 import com.linkedin.feathr.offline.mvel.plugins.FeathrExpressionExecutionContext
 import com.linkedin.feathr.offline.{TestFeathr, TestUtils}
-import org.apache.log4j.{Level, Logger}
 import org.apache.spark.SparkException
 import org.apache.spark.sql.functions.{when => _, _}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{AnalysisException, DataFrame, Row, SparkSession}
 import org.mockito.Mockito._
-import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.testng.Assert._
 import org.testng.annotations.{DataProvider, Test}
 import org.apache.spark.sql.internal.SQLConf
 
 class TestSequentialJoinAsDerivation extends TestFeathr with MockitoSugar {
-  Logger.getLogger("org").setLevel(Level.OFF)
-  Logger.getLogger("akka").setLevel(Level.OFF)
   val mvelContext = new FeathrExpressionExecutionContext()
   private def getSampleEmployeeDF = {
     val schema = {

@@ -1,11 +1,10 @@
 package com.linkedin.feathr.offline.job
 
-import com.linkedin.feathr.offline.client.{FeathrClient, FeathrClient2}
+import com.linkedin.feathr.offline.client.FeathrClient
 import com.linkedin.feathr.offline.config.FeatureJoinConfig
 import com.linkedin.feathr.offline.mvel.plugins.FeathrExpressionExecutionContext
-import com.linkedin.feathr.offline.source.dataloader.DataLoaderHandler
 import com.linkedin.feathr.offline.source.accessor.DataPathHandler
-import com.linkedin.feathr.offline.source.dataloader.DataLoaderFactory
+import com.linkedin.feathr.offline.source.dataloader.{DataLoaderFactory, DataLoaderHandler}
 import com.linkedin.feathr.offline.source.{DataSource, SourceFormatType}
 import com.linkedin.feathr.offline.util.FeathrTestUtils.createSparkSession
 import com.linkedin.feathr.offline.util.{FeaturizedDatasetMetadata, SparkFeaturizedDataset}

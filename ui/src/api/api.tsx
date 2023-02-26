@@ -20,6 +20,7 @@ import {
   LoginOktaModel,
   SignupOptModel
 } from '@/models/model'
+import { globalStore } from '@/store'
 import { getMsalConfig } from '@/utils/utils'
 
 const msalInstance = getMsalConfig()

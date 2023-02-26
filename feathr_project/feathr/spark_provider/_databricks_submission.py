@@ -235,11 +235,6 @@ class _FeathrDatabricksJobLauncher(SparkJobLauncher):
             # else you will get List Index Out of Bound exception
             # Example from feathr_config.yaml -
             # config_template: {"run_name":"FEATHR_FILL_IN",.....,"libraries":[{}, {}],".......}
-
-            submission_params["libraries"][1]["maven"]= {
-                "coordinates": "com.github.everit-org.json-schema:org.everit.json.schema:1.9.1",
-                "repo":"https://repository.mulesoft.org/nexus/content/repositories/public/"
-                }
         else:
             submission_params["libraries"][0]["jar"] = self.upload_or_get_cloud_path(
                 main_jar_path)
@@ -348,7 +343,7 @@ class _FeathrDatabricksJobLauncher(SparkJobLauncher):
             )
             return None
 
-    def download_result(self, result_path: str, local_folder: str):
+    def download_result(self, result_path: str, local_folder: str, is_file_path: bool = False):
         """
         Supports downloading files from the result folder. Only support paths starts with `dbfs:/` and only support downloading files in one folder (per Spark's design, everything will be in the result folder in a flat manner)
         """
@@ -357,9 +352,9 @@ class _FeathrDatabricksJobLauncher(SparkJobLauncher):
                 'Currently only paths starting with dbfs is supported for downloading results from a databricks cluster. The path should start with "dbfs:" .'
             )
 
-        DbfsApi(self.api_client).cp(recursive=True,
-                                    overwrite=True, src=result_path, dst=local_folder)
-
+        recursive = True if not is_file_path else False
+        DbfsApi(self.api_client).cp(recursive=recursive, overwrite=True, src=result_path, dst=local_folder)
+        
     def cloud_dir_exists(self, dir_path: str):
         """
         Check if a directory of hdfs already exists
