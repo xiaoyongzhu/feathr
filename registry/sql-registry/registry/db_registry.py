@@ -37,7 +37,7 @@ class Edges(Base):
     edge_id = db.Column('edge_id', db.String(50),nullable=False, primary_key=True)
     from_id =  db.Column('from_id', db.String(50), nullable=False)
     to_id = db.Column('to_id', db.String(20), nullable=False)
-    conn_type = db.Column('conn_type', db.String(20), nullable=False) 
+    conn_type = db.Column('conn_type', db.String(20), nullable=False)
 
 
 def quote(id):
@@ -73,14 +73,14 @@ class DbRegistry(Registry):
                         db.Column('edge_id', db.String(50),nullable=False, primary_key=True),
                         db.Column('from_id', db.String(50), nullable=False),
                         db.Column('to_id', db.String(20), nullable=False),
-                        db.Column('conn_type', db.String(20), nullable=False) 
+                        db.Column('conn_type', db.String(20), nullable=False)
                         )
             metadata.create_all(engine) #Creates the table
     def _fetch_helper(self, query):
         """serves as a function to have max code similarity between the ORM based code and the SQL based code. Basically fetch all and return a dict (otherwise it might just return a list of `LegacyRow` object)
         """
         # 
-        
+
         if isinstance(query, Query):
             # if this is already a query object, execute it
             r = query.all()
@@ -90,19 +90,32 @@ class DbRegistry(Registry):
         r = [ele._asdict() for ele in r]
         return r
 
-    def get_projects(self) -> List[str]:
+    def get_projects(self, ids) -> List[dict]:
         if os.environ.get("FEATHR_SANDBOX"):
-            query = db.select(self.entities_table.c.qualified_name).where((self.entities_table.c.entity_type == str(EntityType.Project))) 
+            if ids is not None and len(ids) > 0:
+                query = db.select(self.entities_table.c.qualified_name) \
+                    .where(and_(
+                            self.entities_table.c.entity_id.in_(ids),
+                            self.entities_table.c.entity_type == str(EntityType.Project)
+                    ))
+            else:
+                query = db.select(self.entities_table.c.qualified_name).where(
+                    (self.entities_table.c.entity_type == str(EntityType.Project)))
+
             ret = self._fetch_helper(query)
         else:
-            ret = self.conn.query(
-            f"select qualified_name from entities where entity_type=%s", str(EntityType.Project))
-        return list([r["qualified_name"] for r in ret])
-    
+            query = f"select entity_id, qualified_name from entities where entity_type=%s"
+            if ids is not None and len(ids) > 0:
+                query += f" and entity_id in %s"
+                ret = self.conn.query(query, str(EntityType.Project), ids)
+            else:
+                ret = self.conn.query(query, str(EntityType.Project))
+        return list(map(lambda obj: {'qualified_name': obj["qualified_name"], 'entity_id': obj["entity_id"]}, ret))
+
     def get_projects_ids(self) -> Dict:
         projects = {}
         if os.environ.get("FEATHR_SANDBOX"):
-            query = db.select(self.entities_table.c.entity_id,self.entities_table.c.qualified_name).where((self.entities_table.c.entity_type == str(EntityType.Project))) 
+            query = db.select(self.entities_table.c.entity_id,self.entities_table.c.qualified_name).where((self.entities_table.c.entity_type == str(EntityType.Project)))
             ret = self._fetch_helper(query)
         else:
             ret = self.conn.query(
@@ -125,7 +138,7 @@ class DbRegistry(Registry):
             pass
         # It is a name
         if os.environ.get("FEATHR_SANDBOX"):
-            query = db.select(self.entities_table.c.entity_id).where((self.entities_table.c.qualified_name == str(id_or_name))) 
+            query = db.select(self.entities_table.c.entity_id).where((self.entities_table.c.qualified_name == str(id_or_name)))
             ret = self._fetch_helper(query)
         else:
             ret = self.conn.query(
@@ -136,7 +149,7 @@ class DbRegistry(Registry):
 
     def get_neighbors(self, id_or_name: Union[str, UUID], relationship: RelationshipType) -> List[Edge]:
         if os.environ.get("FEATHR_SANDBOX"):
-            query = db.select(self.edges_table.c.edge_id, self.edges_table.c.from_id, self.edges_table.c.to_id,self.edges_table.c.conn_type).where((self.edges_table.c.from_id == str(self.get_entity_id(id_or_name))) & (self.edges_table.c.conn_type == relationship.name)) 
+            query = db.select(self.edges_table.c.edge_id, self.edges_table.c.from_id, self.edges_table.c.to_id,self.edges_table.c.conn_type).where((self.edges_table.c.from_id == str(self.get_entity_id(id_or_name))) & (self.edges_table.c.conn_type == relationship.name))
             rows = self._fetch_helper(query)
         else:
             rows = self.conn.query(fr'''
@@ -188,7 +201,7 @@ class DbRegistry(Registry):
             df.attributes.input_features = features
         all_edges = self._get_edges(ids)
         return EntitiesAndRelations([project] + children, list(edges.union(all_edges)))
-    
+
     def get_dependent_entities(self, entity_id: Union[str, UUID]) -> List[Entity]:
         """
         Given entity id, returns list of all entities that are downstream/dependant on the given entity
@@ -205,29 +218,29 @@ class DbRegistry(Registry):
         if entity.entity_type in (EntityType.AnchorFeature, EntityType.DerivedFeature):
             downstream_entities, _ = self._bfs(entity_id, RelationshipType.Produces)
         return [e for e in downstream_entities if str(e.id) != str(entity_id)]
-    
+
     def delete_empty_entities(self, entities: List[Entity]):
         """
         Given entity list, deleting all anchors that have no features and all sources that have no anchors.
         """
         if len(entities) == 0:
             return
-        
+
         # clean up empty anchors
         for e in entities:
             if e.entity_type == EntityType.Anchor:
-                downstream_entities, _ = self._bfs(e.id, RelationshipType.Contains) 
+                downstream_entities, _ = self._bfs(e.id, RelationshipType.Contains)
                 if len(downstream_entities) == 1: # only anchor itself
                     self.delete_entity(e.id)
         # clean up empty sources
         for e in entities:
             if e.entity_type == EntityType.Source:
-                downstream_entities, _ = self._bfs(e.id, RelationshipType.Produces) 
+                downstream_entities, _ = self._bfs(e.id, RelationshipType.Produces)
                 if len(downstream_entities) == 1: # only source itself
                     self.delete_entity(e.id)
 
         return
-        
+
     def delete_entity(self, entity_id: Union[str, UUID]):
         """
         Deletes given entity
@@ -246,11 +259,11 @@ class DbRegistry(Registry):
         """
         WARN: This search function is implemented via `like` operator, which could be extremely slow.
         """
-        
+
         top_clause = ""
         if start is not None and size is not None:
             top_clause = f"TOP({int(start) + int(size)})"
-            
+
         if project:
             project_id = self.get_entity_id(project)
             if os.environ.get("FEATHR_SANDBOX"):
@@ -264,7 +277,7 @@ class DbRegistry(Registry):
                     edges.to_id=%s and qualified_name like %s and entity_type in %s
                     order by qualified_name'''
                 rows = self.conn.query(sql, (str(project_id), '%' + keyword + '%', tuple([str(t) for t in type])))
-                
+
         else:
             if os.environ.get("FEATHR_SANDBOX"):
                 query = self.sql_session.query(Entities.entity_id.label("id"),  Entities.qualified_name, Entities.entity_type.label("type")).filter(Entities.qualified_name.ilike("%" + keyword + "%"), Entities.entity_type.in_(tuple([str(t) for t in type]))).order_by(Entities.qualified_name).slice(int(start), int(start + size))
@@ -282,7 +295,7 @@ class DbRegistry(Registry):
         with self.conn.transaction() as c:
             # First we try to find existing entity with the same qualified name
             if os.environ.get("FEATHR_SANDBOX"):
-                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
+                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name))
                 r = self._fetch_helper(query)
             else:
                 c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
@@ -317,7 +330,7 @@ class DbRegistry(Registry):
         with self.conn.transaction() as c:
             # First we try to find existing entity with the same qualified name
             if os.environ.get("FEATHR_SANDBOX"):
-                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
+                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name))
                 r = self._fetch_helper(query)
             else:
                 c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
@@ -366,7 +379,7 @@ class DbRegistry(Registry):
         with self.conn.transaction() as c:
             # First we try to find existing entity with the same qualified name
             if os.environ.get("FEATHR_SANDBOX"):
-                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
+                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name))
                 r = self._fetch_helper(query)
             else:
                 c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
@@ -390,7 +403,7 @@ class DbRegistry(Registry):
                 raise ConflictError("Entity %s already exists" %
                                  definition.qualified_name)
             if os.environ.get("FEATHR_SANDBOX"):
-                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.qualified_name).where((self.entities_table.c.entity_id == str(definition.source_id)) & (self.entities_table.c.entity_type == str(EntityType.Source))) 
+                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.qualified_name).where((self.entities_table.c.entity_id == str(definition.source_id)) & (self.entities_table.c.entity_type == str(EntityType.Source)))
                 r = self._fetch_helper(query)
             else:
                 c.execute("select entity_id, qualified_name from entities where entity_id = %s and entity_type = %s", (str(
@@ -428,7 +441,7 @@ class DbRegistry(Registry):
         with self.conn.transaction() as c:
             # First we try to find existing entity with the same qualified name
             if os.environ.get("FEATHR_SANDBOX"):
-                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
+                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name))
                 r = self._fetch_helper(query)
             else:
                 c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
@@ -484,7 +497,7 @@ class DbRegistry(Registry):
         with self.conn.transaction() as c:
             # First we try to find existing entity with the same qualified name
             if os.environ.get("FEATHR_SANDBOX"):
-                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
+                query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name))
                 r = self._fetch_helper(query)
             else:
                 c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
@@ -583,7 +596,7 @@ class DbRegistry(Registry):
                 "to_id": str(to_id),
                 "type": type.name
             })
-    
+
     def _delete_all_entity_edges(self, cursor, entity_id: UUID):
         """
         Deletes all edges associated with an entity
@@ -595,7 +608,7 @@ class DbRegistry(Registry):
         else:
             sql = fr'''DELETE FROM edges WHERE from_id = %s OR to_id = %s'''
             cursor.execute(sql, (str(entity_id), str(entity_id)))
-    
+
     def _delete_entity(self, cursor, entity_id: UUID):
         """
         Deletes entity from entities table
@@ -646,7 +659,7 @@ class DbRegistry(Registry):
                 query = self.sql_session.query(Edges.edge_id,Edges.from_id, Edges.to_id, Edges.conn_type).filter((Edges.from_id.in_(tuple([str(id) for id in ids]))) & (Edges.to_id.in_(tuple([str(id) for id in ids]))) & (Edges.conn_type.in_(tuple([t.name for t in types]))) )
             else:
                 query = self.sql_session.query(Edges.edge_id,Edges.from_id, Edges.to_id, Edges.conn_type).filter((Edges.from_id.in_(tuple([str(id) for id in ids]))) & (Edges.to_id.in_(tuple([str(id) for id in ids]))))
-            
+
             rows = self._fetch_helper(query)
         else:
             sql = fr"""select edge_id, from_id, to_id, conn_type from edges
@@ -657,7 +670,7 @@ class DbRegistry(Registry):
                 where conn_type in %(types)s
                 and from_id in %(ids)s
                 and to_id in %(ids)s"""
-            
+
             rows = self.conn.query(sql, {
                 "ids": tuple([str(id) for id in ids]),
                 "types": tuple([t.name for t in types]),
@@ -666,7 +679,7 @@ class DbRegistry(Registry):
 
     def _get_entity(self, id_or_name: Union[str, UUID]) -> Entity:
         if os.environ.get("FEATHR_SANDBOX"):
-            query = db.select(self.entities_table.c.entity_id, self.entities_table.c.qualified_name, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.entity_id == str(self.get_entity_id(id_or_name)))) 
+            query = db.select(self.entities_table.c.entity_id, self.entities_table.c.qualified_name, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.entity_id == str(self.get_entity_id(id_or_name))))
             row = self._fetch_helper(query)
         else:
             row = self.conn.query(fr'''

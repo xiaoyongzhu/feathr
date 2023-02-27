@@ -6,7 +6,8 @@ WORKDIR /usr/src/ui
 COPY ./ui .
 
 ## Use api endpoint from same host and build production static bundle
-RUN echo 'REACT_APP_API_ENDPOINT=http://localhost:8000' >> .env.production
+RUN echo 'REACT_APP_API_ENDPOINT=http://localhost:8000' >> .env.production \
+    && echo 'REACT_APP_OKTA_CALLBACK_URI=http://localhost:8081/okta-login/callback' >> .env.production
 RUN npm install && npm run build
 
 FROM gradle:7.6.0-jdk8 as gradle-build
@@ -42,6 +43,9 @@ COPY ./registry /usr/src/registry
 WORKDIR /usr/src/registry/sql-registry
 RUN pip install -r requirements.txt
 
+# install iam registry
+WORKDIR /usr/src/registry/access_control
+RUN pip install -r requirements.txt
 
 
 ## Start service and then start nginx
@@ -88,10 +92,10 @@ RUN /usr/src/registry/start_local.sh -m build_docker && python feathr_init_scrip
 
 USER root
 
-# 80: Feathr UI 
-# 8000: Feathr REST API 
-# 8888: Jupyter 
-# 8080: VsCode 
+# 80: Feathr UI
+# 8000: Feathr REST API
+# 8888: Jupyter
+# 8080: VsCode
 # 7080: Interpret
 EXPOSE 80 8000 8080 8888 7080 2181
 # run the service so we can initialize

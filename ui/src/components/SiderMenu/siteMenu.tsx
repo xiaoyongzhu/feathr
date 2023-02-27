@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
   ControlOutlined,
@@ -8,9 +8,12 @@ import {
   HomeOutlined,
   PartitionOutlined,
   ProjectOutlined,
-  RocketOutlined
+  RocketOutlined,
+  UserOutlined
 } from '@ant-design/icons'
 import { Layout, Menu, MenuProps, Typography } from 'antd'
+
+import { Link, useLocation } from 'react-router-dom'
 
 import { observer, useStore } from '@/hooks'
 
@@ -18,7 +21,6 @@ import VersionBar from './VersionBar'
 
 import styles from './index.module.less'
 
-type MenuItems = MenuProps['items']
 export interface SiderMenuProps {
   collapsedWidth?: number
   siderWidth?: number
@@ -27,83 +29,81 @@ export interface SiderMenuProps {
 const { Title } = Typography
 const { Sider } = Layout
 
+const menuItems = [
+  {
+    key: '',
+    icon: <HomeOutlined style={{ fontSize: '20px', color: '#e28743' }} />,
+    label: <Link to="/">Home</Link>
+  },
+  {
+    key: 'users',
+    icon: <UserOutlined style={{ fontSize: '20px', color: '#abcdff' }} />,
+    label: <Link to="/users">Users</Link>
+  },
+  {
+    key: 'projects',
+    icon: <ProjectOutlined style={{ fontSize: '20px', color: '#177ddc' }} />,
+    label: <Link to="/projects">Projects</Link>
+  },
+  {
+    key: 'lineage',
+    icon: <PartitionOutlined style={{ fontSize: '20px', color: '#b9038b' }} />,
+    label: <Link to="/lineage">Lineage</Link>
+  },
+  {
+    key: 'datasources',
+    icon: <DatabaseOutlined style={{ fontSize: '20px', color: '#13a8a8' }} />,
+    label: <Link to="/dataSources">Data Sources</Link>
+  },
+  {
+    key: 'features',
+    icon: <CopyOutlined style={{ fontSize: '20px', color: '#d89614' }} />,
+    label: <Link to="/features">Features</Link>
+  },
+  {
+    key: 'jobs',
+    icon: <RocketOutlined style={{ fontSize: '20px', color: '#642ab5' }} />,
+    label: <Link to="/jobs">Jobs</Link>
+  },
+  {
+    key: 'monitoring',
+    icon: <EyeOutlined style={{ fontSize: '20px', color: '#e84749' }} />,
+    label: <Link to="/monitoring">Monitoring</Link>
+  }
+]
+
 const enableRBAC = window.environment?.enableRBAC
 const showManagement = enableRBAC ? enableRBAC : process.env.REACT_APP_ENABLE_RBAC
+
+if (showManagement === 'true') {
+  menuItems.push({
+    key: 'management',
+    icon: <ControlOutlined style={{ fontSize: '20px', color: '#6495ed' }} />,
+    label: <Link to="/management">Management</Link>
+  })
+}
+
+const getMenuKey = (pathname: string) => {
+  return pathname.split('/')[1].toLocaleLowerCase()
+}
 
 const defaultProps = {
   collapsedWidth: 60,
   siderWidth: 200
 }
 
-const menuItems: MenuItems = [
-  {
-    key: 'home',
-    icon: <HomeOutlined style={{ fontSize: '20px', color: '#e28743' }} />,
-    label: 'Home'
-  },
-  {
-    key: 'projects',
-    icon: <ProjectOutlined style={{ fontSize: '20px', color: '#177ddc' }} />,
-    label: 'Projects'
-  },
-  {
-    key: 'lineage',
-    icon: <PartitionOutlined style={{ fontSize: '20px', color: '#b9038b' }} />,
-    label: 'Lineage'
-  },
-  {
-    key: 'datasources',
-    icon: <DatabaseOutlined style={{ fontSize: '20px', color: '#13a8a8' }} />,
-    label: 'Data Sources'
-  },
-  {
-    key: 'features',
-    icon: <CopyOutlined style={{ fontSize: '20px', color: '#d89614' }} />,
-    label: 'Features'
-  },
-  {
-    key: 'jobs',
-    icon: <RocketOutlined style={{ fontSize: '20px', color: '#642ab5' }} />,
-    label: 'Jobs'
-  },
-  {
-    key: 'monitoring',
-    icon: <EyeOutlined style={{ fontSize: '20px', color: '#e84749' }} />,
-    label: 'Monitoring'
-  }
-]
-
-if (showManagement === 'true') {
-  menuItems.push({
-    key: 'management',
-    icon: <ControlOutlined style={{ fontSize: '20px', color: '#6495ed' }} />,
-    label: 'Management'
-  })
-}
-
-const paths = ['lineage', 'datasources', 'features', 'jobs', 'monitoring']
-
 const SideMenu = (props: SiderMenuProps) => {
-  const { globalStore } = useStore()
-  const { project, menuKeys, navigate, setSwitchProjecModalOpen } = globalStore
+  const location = useLocation()
 
   const { siderWidth, collapsedWidth } = { ...defaultProps, ...props }
 
   const [collapsed] = useState<boolean>(false)
 
-  const onClickMenu: MenuProps['onClick'] = (e) => {
-    const { key } = e
+  const [current, setcurrent] = useState<string>(getMenuKey(location.pathname))
 
-    if (paths.includes(key)) {
-      if (project) {
-        navigate?.(`/${project}/${key}`)
-      } else {
-        setSwitchProjecModalOpen?.(true, key)
-      }
-    } else {
-      navigate?.(`/${key}`)
-    }
-  }
+  useEffect(() => {
+    setcurrent(getMenuKey(location.pathname))
+  }, [location.pathname])
 
   return (
     <>
@@ -129,13 +129,7 @@ const SideMenu = (props: SiderMenuProps) => {
         >
           Feathr
         </Title>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={menuKeys}
-          items={menuItems}
-          onClick={onClickMenu}
-        />
+        <Menu theme="dark" mode="inline" selectedKeys={[current]} items={menuItems} />
 
         <VersionBar className={styles.versionBar} />
       </Sider>
@@ -143,4 +137,4 @@ const SideMenu = (props: SiderMenuProps) => {
   )
 }
 
-export default observer(SideMenu)
+export default SideMenu

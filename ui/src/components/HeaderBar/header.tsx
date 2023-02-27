@@ -15,6 +15,7 @@ import styles from './index.module.less'
 const { Link } = Typography
 
 const Header = () => {
+  const userName = window.localStorage.getItem('user_name') as string
   const { globalStore } = useStore()
   const { project, setSwitchProjecModalOpen } = globalStore
   const { accounts } = useMsal()
@@ -23,7 +24,6 @@ const Header = () => {
   const onOpen = () => {
     setSwitchProjecModalOpen(true)
   }
-
   return (
     <>
       <Layout.Header className={styles.header}>
@@ -43,7 +43,7 @@ const Header = () => {
           >
             <GithubOutlined />
           </Link>
-          <HeaderWidget username={account?.username} />
+          <HeaderWidget username={userName} />
         </span>
       </Layout.Header>
       <div className={styles.vacancy} />

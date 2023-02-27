@@ -13,6 +13,7 @@
     "lint-stylelint": "stylelint --config .stylelintrc src/**/*.{less,css}"
   },
   "dependencies": {
+    "@okta/okta-auth-js": "7.2.0",
     "@ant-design/icons": "^4.7.0",
     "@azure/msal-browser": "^2.24.0",
     "@azure/msal-react": "^1.4.0",
@@ -21,6 +22,8 @@
     "classnames": "^2.3.2",
     "dagre": "^0.8.5",
     "dayjs": "^1.11.5",
+    "js-cookie": "^3.0.1",
+    "querystring": "^0.2.1",
     "mobx": "^6.8.0",
     "mobx-react": "^7.6.0",
     "nprogress": "^0.2.0",
@@ -39,6 +42,7 @@
     "@testing-library/user-event": "^13.5.0",
     "@types/dagre": "^0.7.47",
     "@types/jest": "^27.5.0",
+    "@types/js-cookie": "^3.0.2",
     "@types/node": "^16.11.26",
     "@types/nprogress": "^0.2.0",
     "@types/react": "^17.0.43",

@@ -79,15 +79,18 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
   } = useQuery<Project[]>(
     ['Projects', project],
     async () => {
-      const reuslt = await fetchProjects()
-      setProjectList(reuslt)
-      return reuslt.reduce((list, item: string) => {
-        const text = project?.trim().toLocaleLowerCase()
-        if (!text || item.includes(text)) {
-          list.push({ name: item })
-        }
-        return list
+      const fetchData = await fetchProjects()
+      const result = fetchData.data
+      result.reduce((list: any, item: {
+        name: string;
+        id: string;
+        qualified_name: string;
+        entity_id: string
+      }) => {
+        item.name = item.qualified_name
+        item.id = item.entity_id
       }, [] as Project[])
+      return result
     },
     {
       retry: false,

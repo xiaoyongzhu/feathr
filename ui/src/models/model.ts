@@ -1,5 +1,27 @@
 export interface Project {
+  id: string
   name: string
+  managers: ProjectUser[]
+  users: ProjectUser[]
+}
+
+export interface ProjectUser {
+  id: string
+  name: string
+}
+
+export interface ResponseType {
+  data: any
+  status: string
+  message: string
+}
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  phone: string
+  createTime: string
 }
 
 export interface Feature {
@@ -157,6 +179,41 @@ export interface NewDatasource {
 
   sql?: string
   table?: string
+}
+
+export interface LoginModel {
+  email: string
+  password: string
+}
+
+export interface LoginOktaModel {
+  code: string
+  redirect_uri: string
+}
+
+export interface SignupOptModel {
+  email: string
+  type: string
+}
+
+export interface SignupModel {
+  email: string
+  password: string
+}
+
+export interface ForgotPasswordModel {
+  username: string
+  password: string
+  confirmPassword: string
+  captcha: string
+}
+
+export interface UserListModel {
+  id: string
+  email: string
+  role: string
+  create_time: string
+  update_time: string
 }
 
 export const ValueType = [

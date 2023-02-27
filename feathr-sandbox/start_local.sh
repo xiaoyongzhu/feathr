@@ -56,6 +56,7 @@ LISTENING_PORT="8000"
 
 if [ "$REACT_APP_ENABLE_RBAC" == "true" ]; then
     echo "RBAC flag configured and set to true, launch both rbac and reigstry apps"
+    cd /usr/src/registry
     if [ "x$PURVIEW_NAME" == "x" ]; then
         echo "Purview flag is not configured, run SQL registry"
         cd sql-registry

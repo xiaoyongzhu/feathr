@@ -1,3 +1,4 @@
+import uvicorn
 import os
 import traceback
 from typing import Optional, Dict, List
@@ -75,8 +76,8 @@ async def index_error_handler(_, exc: IndexError):
 
 
 @router.get("/projects")
-def get_projects() -> List[str]:
-    return registry.get_projects()
+def get_projects(ids: List[str] = None) -> List[dict]:
+    return registry.get_projects(ids)
 
 @router.get("/projects-ids")
 def get_projects_ids() -> Dict:
@@ -194,3 +195,6 @@ def new_project_derived_feature(project: str, definition: Dict) -> Dict:
 
 
 app.include_router(prefix=rp, router=router)
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="localhost", port=18000, reload=True)

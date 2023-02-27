@@ -1,5 +1,9 @@
+import qs from 'querystring'
+
 import { InteractionRequiredAuthError, PublicClientApplication } from '@azure/msal-browser'
+import { message } from 'antd'
 import Axios from 'axios'
+import Cookies from 'js-cookie'
 
 import {
   DataSource,
@@ -8,18 +12,56 @@ import {
   Role,
   UserRole,
   NewFeature,
-  NewDatasource
+  NewDatasource,
+  LoginModel,
+  ResponseType,
+  SignupModel,
+  ForgotPasswordModel,
+  LoginOktaModel,
+  SignupOptModel, Project
 } from '@/models/model'
 import { globalStore } from '@/store'
 import { getMsalConfig } from '@/utils/utils'
 
 const msalInstance = getMsalConfig()
+
 const getApiBaseUrl = () => {
   let endpoint = process.env.REACT_APP_API_ENDPOINT
   if (!endpoint || endpoint === '') {
     endpoint = window.location.protocol + '//' + window.location.host
   }
   return endpoint + '/api/v1'
+}
+
+export const authAxios = async (msalInstance: PublicClientApplication) => {
+  const token = await getIdToken(msalInstance)
+  const axios = Axios.create({
+    headers: {
+      // Authorization: 'Bearer ' + token,
+      'X-Token': token,
+      'Content-Type': 'application/json'
+    },
+    baseURL: getApiBaseUrl()
+  })
+
+  axios.interceptors.response.use(
+    (response) => {
+      if (response?.data?.status !== 'SUCCESS') {
+        message.error(response.data.message)
+        return Promise.reject(response.data.message)
+      }
+      return response
+    },
+    (error) => {
+      if (error.response?.status === 403) {
+        const detail = error.response.data.detail
+        window.location.href = '/responseErrors/403/' + detail
+      } else {
+        return Promise.reject(error.response.data)
+      }
+    }
+  )
+  return axios
 }
 
 export const fetchDataSources = async (project: string) => {
@@ -52,9 +94,22 @@ export const fetchDataSource = async (project: string, dataSourceId: string) => 
 }
 
 export const fetchProjects = async () => {
+  const organizationId = localStorage.getItem('organization_id')
   const axios = await authAxios(msalInstance)
   return axios
-    .get<[]>(`${getApiBaseUrl()}/projects`, {
+    .get<ResponseType>(`${getApiBaseUrl()}/organizations/${organizationId}/projects`, {
+      headers: {}
+    })
+    .then((response) => {
+      return response.data
+    })
+}
+
+export const fetchProjectSelectors = async () => {
+  const organizationId = localStorage.getItem('organization_id')
+  const axios = await authAxios(msalInstance)
+  return axios
+    .get<Project[]>(`${getApiBaseUrl()}/organizations/${organizationId}/projects/selector`, {
       headers: {}
     })
     .then((response) => {
@@ -179,6 +234,10 @@ export const deleteUserRole = async (userrole: UserRole) => {
 }
 
 export const getIdToken = async (msalInstance: PublicClientApplication): Promise<string> => {
+  const token = Cookies.get('token')
+  if (token) {
+    return token
+  }
   const activeAccount = msalInstance.getActiveAccount() // This will only return a non-null value if you have logic somewhere else that calls the setActiveAccount API
   const accounts = msalInstance.getAllAccounts()
   const request = {
@@ -205,37 +264,6 @@ export const getIdToken = async (msalInstance: PublicClientApplication): Promise
     })
 
   return idToken
-}
-
-export const authAxios = async (msalInstance: PublicClientApplication) => {
-  const token = await getIdToken(msalInstance)
-  const axios = Axios.create({
-    headers: {
-      Authorization: 'Bearer ' + token,
-      'Content-Type': 'application/json'
-    },
-    baseURL: getApiBaseUrl()
-  })
-
-  axios.interceptors.response.use(
-    (response) => {
-      return response
-    },
-    (error) => {
-      if (error.response?.status === 403) {
-        const detail = error.response.data.detail
-        globalStore.navigate?.('/403', { replace: true, state: detail })
-      } else if (error.response?.status === 404) {
-        globalStore.navigate?.('/404', {
-          replace: true,
-          state: `the '${globalStore.project}' project is not found.`
-        })
-      }
-      return Promise.reject(error.response.data)
-      //TODO: handle other response errors
-    }
-  )
-  return axios
 }
 
 export const deleteEntity = async (enity: string) => {
@@ -278,5 +306,90 @@ export const createSource = async (project: string, datasource: NewDatasource) =
     .post(`${getApiBaseUrl()}/projects/${project}/datasources`, datasource)
     .then((response) => {
       return response
+    })
+}
+
+export const signup = async (data: SignupModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios.post<ResponseType>(`${getApiBaseUrl()}/signup`, data).then((response) => {
+    return response
+  })
+}
+
+export const signupOpt = async (data: SignupOptModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios
+    .post<ResponseType>(`${getApiBaseUrl()}/captcha/send`, data, { params: data })
+    .then((response) => {
+      return response
+    })
+}
+
+export const forgotPassword = async (data: ForgotPasswordModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios.post<ResponseType>(`${getApiBaseUrl()}/reset-password`, data).then((response) => {
+    return response
+  })
+}
+
+export const login = async (data: LoginModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios.post(`${getApiBaseUrl()}/login`, data).then((response) => {
+    return response
+  })
+}
+
+export const loginOkta = async (data: LoginOktaModel) => {
+  const axios = await authAxios(msalInstance)
+  return axios.post(`${getApiBaseUrl()}/okta/login`, data).then((response) => {
+    return response
+  })
+}
+
+export const fetchUsers = async (params: { keyword?: string }) => {
+  const organizationId = localStorage.getItem('organization_id')
+  const axios = await authAxios(msalInstance)
+  return axios
+    .get<ResponseType>(`${getApiBaseUrl()}/organizations/${organizationId}/users`, {
+      headers: {},
+      params
+    })
+    .then((response) => {
+      return response.data
+    })
+}
+
+export const inviteUser = async (params: { email: string; role: string }) => {
+  const organizationId = localStorage.getItem('organization_id')
+  const axios = await authAxios(msalInstance)
+  return axios
+    .post<ResponseType>(
+      `${getApiBaseUrl()}/organizations/${organizationId}/invite?${qs.stringify(params)}`
+    )
+    .then((response) => {
+      return response.data
+    })
+}
+
+export const changeUser = async (params: { role: string }, userId: string) => {
+  const organizationId = localStorage.getItem('organization_id')
+  const axios = await authAxios(msalInstance)
+  return axios
+    .post<ResponseType>(
+      `${getApiBaseUrl()}/organizations/${organizationId}/users/${userId}`,
+      params
+    )
+    .then((response) => {
+      return response.data
+    })
+}
+
+export const removeUser = async (userId: string) => {
+  const organizationId = localStorage.getItem('organization_id')
+  const axios = await authAxios(msalInstance)
+  return axios
+    .delete<[]>(`${getApiBaseUrl()}/organizations/${organizationId}/users/${userId}`, {})
+    .then((response) => {
+      return response.data
     })
 }
