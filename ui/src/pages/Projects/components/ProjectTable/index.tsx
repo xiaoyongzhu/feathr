@@ -83,10 +83,12 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
       const result = fetchData.data
       result.reduce((list: any, item: {
         name: string;
+        id: string;
         qualified_name: string;
         entity_id: string
       }) => {
         item.name = item.qualified_name
+        item.id = item.entity_id
       }, [] as Project[])
       return result
     },

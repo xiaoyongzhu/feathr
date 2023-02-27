@@ -18,7 +18,7 @@ import {
   SignupModel,
   ForgotPasswordModel,
   LoginOktaModel,
-  SignupOptModel
+  SignupOptModel, Project
 } from '@/models/model'
 import { globalStore } from '@/store'
 import { getMsalConfig } from '@/utils/utils'
@@ -98,6 +98,18 @@ export const fetchProjects = async () => {
   const axios = await authAxios(msalInstance)
   return axios
     .get<ResponseType>(`${getApiBaseUrl()}/organizations/${organizationId}/projects`, {
+      headers: {}
+    })
+    .then((response) => {
+      return response.data
+    })
+}
+
+export const fetchProjectSelectors = async () => {
+  const organizationId = localStorage.getItem('organization_id')
+  const axios = await authAxios(msalInstance)
+  return axios
+    .get<Project[]>(`${getApiBaseUrl()}/organizations/${organizationId}/projects/selector`, {
       headers: {}
     })
     .then((response) => {

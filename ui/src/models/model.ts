@@ -1,4 +1,12 @@
 export interface Project {
+  id: string
+  name: string
+  managers: ProjectUser[]
+  users: ProjectUser[]
+}
+
+export interface ProjectUser {
+  id: string
   name: string
 }
 

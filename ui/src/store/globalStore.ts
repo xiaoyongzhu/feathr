@@ -1,7 +1,7 @@
 import { action, makeObservable, observable, runInAction } from 'mobx'
 import type { NavigateFunction } from 'react-router-dom'
 
-import { fetchProjects } from '@/api'
+import {fetchProjects, fetchProjectSelectors} from '@/api'
 import { Project } from '@/models/model'
 
 class GlobalStore {
@@ -53,15 +53,13 @@ class GlobalStore {
     this.routeName = routeName
   }
 
-  setProjectList(list: string[]) {
-    this.projectList = list.map((item) => ({
-      name: item
-    }))
+  setProjectList(list: Project[]) {
+    this.projectList = list
   }
 
   async fetchProjects() {
     try {
-      const result = await fetchProjects()
+      const result = await fetchProjectSelectors() as Project[]
       runInAction(() => {
         this.setProjectList(result)
       })
