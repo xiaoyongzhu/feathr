@@ -900,50 +900,42 @@ class FeathrClient(object):
                               agg_expr: str = None, agg_window: str = None, agg_func: str = None, tags: dict = {}) -> List[str,FeatureBase]:
 
         '''
-        ExpressionTransformation:
-                transform_expr:
+        Attributes:
+            project_name: DEBUG_ZERO_TEST , hbo_demo_hod , short_term_ltv_v5 etc.
+            key_column  --->  The id column name of this key. e.g. 'product_id' ,'HBO_UUID
+            transform_expr -> expr: expression that transforms the raw value into a new value, e.g. amount * 10.
+            agg_expr    --->  expression that transforms the raw value into a new value, e.g. amount * 10
+            agg_window  --->  The example value are "7d' or "5h" or "3m" or "1s"
+            agg_func    --->  Available values: `SUM`, `COUNT`, `MAX`, `MIN`, `AVG`, `MAX_POOLING`, `MIN_POOLING`, `AVG_POOLING`, `LATEST`
 
-        WindowTransformation:
-            1.  window: Time window length to apply the aggregation. support 4 type of units: d(day), h(hour), m(minute), s(second). The example value are "7d' or "5h"
-               or "3m" or "1s"
-
-            2. agg_func: aggregation function. Available values: `SUM`, `COUNT`, `MAX`, `MIN`, `AVG`, `MAX_POOLING`, `MIN_POOLING`, `AVG_POOLING`, `LATEST`
-            3. agg_expr
-
-        key_column : Eg. HBO_UUID
-
-        tags : eg. {"type":"anchored/derived","entity_key":"HBO_UUOD"}
-           '''
+        '''
 
         feature_map = self.get_features_from_registry(project_name)
-        filtered_features = []
+        filtered_features = {}
 
         try:
 
-            for featureName, feature in feature_map.items():
+            for feature_name, feature in feature_map.items():
 
                 if key_column:
                     key_column = key_column.upper()
                     if feature.key[0].key_column != key_column:
-                        # filtered_features.append(featureName)
                         continue
 
                 if transform_expr:
-                    if not isinstance(feature.transform,
-                                      ExpressionTransformation) or feature.transform.expr != transform_expr:
-                        # filtered_features.append(featureName)
+                    if not isinstance(feature.transform,ExpressionTransformation) or \
+                            feature.transform.expr != transform_expr:
+
                         continue
 
                 if agg_expr:
                     if not isinstance(feature.transform, WindowAggTransformation) or (
                             feature.transform.def_expr != agg_expr):
-                        # filtered_features.append(featureName)
                         continue
 
                 if agg_window:
                     if not isinstance(feature.transform, WindowAggTransformation) or (
                             feature.transform.window != agg_window):
-                        # filtered_features.append(featureName)
                         continue
 
                 if agg_func:
@@ -951,15 +943,13 @@ class FeathrClient(object):
                     agg_func = agg_func.upper()
                     if not isinstance(feature.transform, WindowAggTransformation) or (
                             feature.transform.agg_func != agg_func):
-                        # filtered_features.append(featureName)
                         continue
 
                 if tags:
                     if all(item not in feature.registry_tags.items() for item in tags.items()):
-                        # filtered_features.append(featureName)
                         continue
 
-                filtered_features.append(featureName)
+                filtered_features[feature_name] = feature
 
         except Exception as e:
             raise e
