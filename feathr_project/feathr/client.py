@@ -946,7 +946,7 @@ class FeathrClient(object):
                         continue
 
                 if tags:
-                    if all(item not in feature.registry_tags.items() for item in tags.items()):
+                    if any(item not in feature.registry_tags.items() for item in tags.items()):
                         continue
 
                 filtered_features[feature_name] = feature
